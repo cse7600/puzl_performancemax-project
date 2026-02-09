@@ -56,15 +56,16 @@ export async function POST(request: NextRequest) {
       }, password)
     }
 
-    // 광고주 정보 조회
+    // 광고주 정보 조회 (id 포함)
     const { data: advertiser } = await supabase
       .from('advertisers')
-      .select('company_name, logo_url, primary_color')
+      .select('id, company_name, logo_url, primary_color')
       .eq('advertiser_id', advertiserId)
       .single()
 
     return handleLogin(supabase, {
       id: user.id,
+      advertiserUuid: advertiser?.id,  // advertisers.id (외래키용)
       advertiserId: user.advertiser_id,
       userId: user.user_id,
       passwordHash: user.password_hash,
@@ -89,6 +90,7 @@ async function handleLogin(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userData: {
     id: string
+    advertiserUuid?: string  // advertisers.id (세션 외래키용)
     advertiserId: string
     userId: string
     passwordHash: string
@@ -128,12 +130,12 @@ async function handleLogin(
   const expiresAt = new Date()
   expiresAt.setDate(expiresAt.getDate() + 7) // 7일 유효
 
-  // 세션 저장 (user_id 포함)
+  // 세션 저장 - advertiser_id는 advertisers.id 사용 (외래키)
   const { error: sessionError } = await supabase
     .from('advertiser_sessions')
     .insert({
-      advertiser_id: userData.id,
-      user_id: userData.id,
+      advertiser_id: userData.advertiserUuid || userData.id,  // advertisers.id
+      user_id: userData.id,  // advertiser_users.id
       token,
       expires_at: expiresAt.toISOString(),
     })
