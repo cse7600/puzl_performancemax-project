@@ -5,99 +5,176 @@ import { randomBytes } from 'crypto'
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, password } = await request.json()
+    const { advertiserId, userId, password } = await request.json()
 
-    if (!userId || !password) {
+    // 3가지 필드 모두 필수
+    if (!advertiserId || !userId || !password) {
       return NextResponse.json(
-        { error: 'User ID and password are required' },
+        { error: '광고주 ID, 사용자 ID, 비밀번호를 모두 입력해주세요' },
         { status: 400 }
       )
     }
 
     const supabase = await createClient()
 
-    // 광고주 조회
-    const { data: advertiser, error: fetchError } = await supabase
-      .from('advertisers')
+    // advertiser_users 테이블에서 조회 (멀티테넌트 + 멀티유저)
+    const { data: user, error: userError } = await supabase
+      .from('advertiser_users')
       .select('*')
+      .eq('advertiser_id', advertiserId)
       .eq('user_id', userId)
       .single()
 
-    if (fetchError || !advertiser) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      )
+    if (userError || !user) {
+      // 기존 advertisers 테이블에서도 시도 (마이그레이션 호환성)
+      const { data: legacyUser, error: legacyError } = await supabase
+        .from('advertisers')
+        .select('*')
+        .eq('advertiser_id', advertiserId)
+        .eq('user_id', userId)
+        .single()
+
+      if (legacyError || !legacyUser) {
+        return NextResponse.json(
+          { error: '광고주 ID, 사용자 ID 또는 비밀번호가 일치하지 않습니다' },
+          { status: 401 }
+        )
+      }
+
+      // 레거시 로그인 처리
+      return handleLogin(supabase, {
+        id: legacyUser.id,
+        advertiserId: legacyUser.advertiser_id,
+        userId: legacyUser.user_id,
+        passwordHash: legacyUser.password_hash,
+        name: legacyUser.company_name + ' Admin',
+        role: 'admin',
+        status: legacyUser.status,
+        companyName: legacyUser.company_name,
+        logoUrl: legacyUser.logo_url,
+        primaryColor: legacyUser.primary_color,
+      }, password)
     }
 
-    // 비밀번호 확인
-    const isValidPassword = await bcrypt.compare(password, advertiser.password_hash)
+    // 광고주 정보 조회
+    const { data: advertiser } = await supabase
+      .from('advertisers')
+      .select('company_name, logo_url, primary_color')
+      .eq('advertiser_id', advertiserId)
+      .single()
 
-    if (!isValidPassword) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      )
-    }
+    return handleLogin(supabase, {
+      id: user.id,
+      advertiserId: user.advertiser_id,
+      userId: user.user_id,
+      passwordHash: user.password_hash,
+      name: user.name,
+      role: user.role,
+      status: user.status,
+      companyName: advertiser?.company_name || advertiserId,
+      logoUrl: advertiser?.logo_url,
+      primaryColor: advertiser?.primary_color,
+    }, password)
 
-    // 계정 상태 확인
-    if (advertiser.status !== 'active') {
-      return NextResponse.json(
-        { error: 'Account is not active' },
-        { status: 403 }
-      )
-    }
-
-    // 세션 토큰 생성
-    const token = randomBytes(32).toString('hex')
-    const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 7) // 7일 유효
-
-    // 세션 저장
-    const { error: sessionError } = await supabase
-      .from('advertiser_sessions')
-      .insert({
-        advertiser_id: advertiser.id,
-        token,
-        expires_at: expiresAt.toISOString(),
-      })
-
-    if (sessionError) {
-      console.error('Session creation error:', sessionError)
-      return NextResponse.json(
-        { error: 'Failed to create session' },
-        { status: 500 }
-      )
-    }
-
-    // 응답에 쿠키 설정
-    const response = NextResponse.json({
-      success: true,
-      advertiser: {
-        id: advertiser.id,
-        advertiserId: advertiser.advertiser_id,
-        companyName: advertiser.company_name,
-        userId: advertiser.user_id,
-        logoUrl: advertiser.logo_url,
-        primaryColor: advertiser.primary_color,
-      },
-    })
-
-    // HttpOnly 쿠키로 토큰 저장
-    response.cookies.set('advertiser_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7일
-      path: '/',
-    })
-
-    return response
   } catch (error) {
     console.error('Login error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: '서버 오류가 발생했습니다' },
       { status: 500 }
     )
   }
+}
+
+async function handleLogin(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userData: {
+    id: string
+    advertiserId: string
+    userId: string
+    passwordHash: string
+    name: string
+    role: string
+    status: string
+    companyName: string
+    logoUrl?: string
+    primaryColor?: string
+  },
+  password: string
+) {
+  // 비밀번호 확인
+  const isValidPassword = await bcrypt.compare(password, userData.passwordHash)
+
+  if (!isValidPassword) {
+    return NextResponse.json(
+      { error: '광고주 ID, 사용자 ID 또는 비밀번호가 일치하지 않습니다' },
+      { status: 401 }
+    )
+  }
+
+  // 계정 상태 확인
+  if (userData.status !== 'active') {
+    const statusMessages: Record<string, string> = {
+      suspended: '계정이 일시 정지되었습니다. 담당자에게 문의해주세요.',
+      inactive: '비활성화된 계정입니다. 담당자에게 문의해주세요.',
+    }
+    return NextResponse.json(
+      { error: statusMessages[userData.status] || '계정을 사용할 수 없습니다' },
+      { status: 403 }
+    )
+  }
+
+  // 세션 토큰 생성
+  const token = randomBytes(32).toString('hex')
+  const expiresAt = new Date()
+  expiresAt.setDate(expiresAt.getDate() + 7) // 7일 유효
+
+  // 세션 저장 (user_id 포함)
+  const { error: sessionError } = await supabase
+    .from('advertiser_sessions')
+    .insert({
+      advertiser_id: userData.id,
+      user_id: userData.id,
+      token,
+      expires_at: expiresAt.toISOString(),
+    })
+
+  if (sessionError) {
+    console.error('Session creation error:', sessionError)
+    return NextResponse.json(
+      { error: '세션 생성에 실패했습니다' },
+      { status: 500 }
+    )
+  }
+
+  // 마지막 로그인 시간 업데이트
+  await supabase
+    .from('advertiser_users')
+    .update({ last_login_at: new Date().toISOString() })
+    .eq('id', userData.id)
+
+  // 응답에 쿠키 설정
+  const response = NextResponse.json({
+    success: true,
+    user: {
+      id: userData.id,
+      advertiserId: userData.advertiserId,
+      userId: userData.userId,
+      name: userData.name,
+      role: userData.role,
+      companyName: userData.companyName,
+      logoUrl: userData.logoUrl,
+      primaryColor: userData.primaryColor,
+    },
+  })
+
+  // HttpOnly 쿠키로 토큰 저장
+  response.cookies.set('advertiser_token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 7, // 7일
+    path: '/',
+  })
+
+  return response
 }
