@@ -1,0 +1,211 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import {
+  Home,
+  Users,
+  Wallet,
+  User,
+  Menu,
+  LogOut,
+  ChevronDown,
+} from 'lucide-react'
+import type { Partner } from '@/types/database'
+
+const NAV_ITEMS = [
+  { href: '/dashboard', label: '홈', icon: Home },
+  { href: '/dashboard/customers', label: '고객', icon: Users },
+  { href: '/dashboard/settlements', label: '지급', icon: Wallet },
+  { href: '/dashboard/profile', label: '활동정보', icon: User },
+]
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const [partner, setPartner] = useState<Partner | null>(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    const fetchPartner = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (user) {
+        const { data } = await supabase
+          .from('partners')
+          .select('*')
+          .eq('auth_user_id', user.id)
+          .single()
+
+        if (data) {
+          setPartner(data)
+        }
+      }
+    }
+    fetchPartner()
+  }, [])
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
+
+  const NavLinks = ({ onClick }: { onClick?: () => void }) => (
+    <>
+      {NAV_ITEMS.map((item) => {
+        const isActive = pathname === item.href
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onClick}
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              isActive
+                ? 'bg-orange-100 text-orange-600 font-medium'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <item.icon className="w-5 h-5" />
+            {item.label}
+          </Link>
+        )
+      })}
+    </>
+  )
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
+        <div className="flex flex-col flex-grow bg-white border-r">
+          {/* Logo */}
+          <div className="flex items-center h-16 px-6 border-b">
+            <Link href="/dashboard" className="text-orange-500 text-xl font-bold">
+              keeper mate
+            </Link>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 p-4 space-y-1">
+            <NavLinks />
+          </nav>
+
+          {/* User Menu */}
+          <div className="p-4 border-t">
+            {mounted ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-between">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-8 h-8">
+                        <AvatarFallback className="bg-orange-100 text-orange-600 text-sm">
+                          {partner?.name?.charAt(0) || '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium truncate">
+                        {partner?.name || '로딩중...'}
+                      </span>
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/profile">프로필 설정</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    로그아웃
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex items-center gap-3 px-3 py-2">
+                <div className="w-8 h-8 rounded-full bg-orange-100" />
+                <span className="text-sm text-gray-400">로딩중...</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile Header */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b z-50 flex items-center justify-between px-4">
+        <Link href="/dashboard" className="text-orange-500 text-xl font-bold">
+          keeper mate
+        </Link>
+
+{mounted && (
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Menu className="w-6 h-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-72">
+              <div className="flex flex-col h-full">
+                <div className="flex items-center gap-3 p-4 border-b">
+                  <Avatar className="w-10 h-10">
+                    <AvatarFallback className="bg-orange-100 text-orange-600">
+                      {partner?.name?.charAt(0) || '?'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">{partner?.name || '로딩중...'}</p>
+                    <p className="text-xs text-gray-500">{partner?.email}</p>
+                  </div>
+                </div>
+
+                <nav className="flex-1 p-4 space-y-1">
+                  <NavLinks onClick={() => setMobileMenuOpen(false)} />
+                </nav>
+
+                <div className="p-4 border-t">
+                  <Button
+                    variant="outline"
+                    className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    로그아웃
+                  </Button>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+        )}
+      </header>
+
+      {/* Main Content */}
+      <main className="lg:pl-64 pt-16 lg:pt-0">
+        <div className="p-4 lg:p-8">
+          {children}
+        </div>
+      </main>
+    </div>
+  )
+}

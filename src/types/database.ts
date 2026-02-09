@@ -1,0 +1,179 @@
+export type PartnerStatus = 'pending' | 'approved' | 'rejected'
+export type PartnerTier = 'authorized' | 'silver' | 'gold' | 'platinum'
+export type ContractStatus = 'pending' | 'call_1' | 'call_2' | 'call_3' | 'completed' | 'invalid' | 'duplicate'
+export type SettlementStatus = 'pending' | 'completed' | 'rejected'
+export type SettlementType = 'contract' | 'valid'
+export type AdvertiserStatus = 'active' | 'suspended' | 'inactive'
+
+// 광고주
+export interface Advertiser {
+  id: string
+  advertiser_id: string // 광고주 고유 ID (예: hanwha_vision)
+  company_name: string
+  user_id: string // 로그인용 사용자 ID
+  password_hash: string // bcrypt로 해시된 비밀번호
+  status: AdvertiserStatus
+  logo_url: string | null
+  primary_color: string | null // 브랜드 색상
+  contact_email: string | null
+  contact_phone: string | null
+  created_at: string
+  updated_at: string
+}
+
+// 광고주 사용자 세션
+export interface AdvertiserSession {
+  id: string
+  advertiser_id: string
+  token: string
+  expires_at: string
+  created_at: string
+}
+
+export interface Partner {
+  id: string
+  advertiser_id: string // 소속 광고주
+  name: string
+  phone: string | null
+  email: string
+  status: PartnerStatus
+  referral_code: string
+  referral_url: string
+  main_channel_link: string | null
+  channels: string[] | null
+  bank_name: string | null
+  bank_account: string | null
+  account_holder: string | null
+  ssn_encrypted: string | null
+  tier: PartnerTier
+  tier_evaluated_at: string | null
+  lead_commission: number
+  contract_commission: number
+  monthly_fee: number
+  marketing_consent: boolean
+  created_at: string
+  auth_user_id: string | null
+}
+
+export interface Referral {
+  id: string
+  name: string
+  name_masked?: string
+  phone: string | null
+  referral_code_input: string | null
+  partner_id: string | null
+  sales_rep: string | null
+  contract_status: ContractStatus
+  is_valid: boolean | null
+  contracted_at: string | null
+  inquiry: string | null
+  created_at: string
+}
+
+export interface Settlement {
+  id: string
+  type?: SettlementType
+  partner_id: string
+  referral_id: string | null
+  amount: number
+  status: 'pending' | 'completed'
+  settled_at: string | null
+  note: string | null
+  created_at: string
+}
+
+export interface PartnerStats {
+  partner_id: string
+  total_referrals: number
+  total_valid: number
+  total_contracts: number
+  total_settlement: number
+}
+
+// 캠페인 설정
+export interface Campaign {
+  id: string
+  name: string
+  is_active: boolean
+  valid_amount: number
+  contract_amount: number
+  tier_pricing_enabled: boolean
+  landing_url: string | null
+  commission_rate: number
+  min_settlement: number
+  duplicate_check_days: number
+  valid_deadline_days: number
+  contract_deadline_days: number
+  created_at: string
+  updated_at: string
+}
+
+// 프로모션
+export type TargetPartners = 'all' | 'new' | `tier:${PartnerTier}`
+
+export interface Promotion {
+  id: string
+  campaign_id: string
+  name: string
+  start_date: string
+  end_date: string
+  valid_bonus: number
+  contract_bonus: number
+  target_count: number | null
+  target_bonus: number | null
+  target_partners: TargetPartners
+  is_active: boolean
+  created_at: string
+}
+
+// 티어별 단가 규칙
+export interface TierRule {
+  id: string
+  campaign_id: string
+  tier: PartnerTier
+  min_contracts: number
+  valid_amount: number | null
+  contract_amount: number | null
+  created_at: string
+}
+
+// SaaS 구독 플랜
+export type SubscriptionPlanName = 'free' | 'starter' | 'growth' | 'pro' | 'enterprise'
+export type SubscriptionStatus = 'active' | 'cancelled' | 'past_due'
+
+export interface SubscriptionPlanFeatures {
+  dashboard?: boolean
+  basic_report?: boolean
+  detailed_report?: boolean
+  custom_landing?: boolean
+  priority_settlement?: boolean
+  api_access?: boolean
+  dedicated_manager?: boolean
+}
+
+export interface SubscriptionPlan {
+  id: string
+  name: SubscriptionPlanName
+  display_name: string
+  monthly_price: number
+  commission_rate: number
+  monthly_db_limit: number | null
+  custom_landing_count: number | null
+  features: SubscriptionPlanFeatures
+  is_active: boolean
+  sort_order: number
+  created_at: string
+}
+
+// 파트너별 구독 상태
+export interface PartnerSubscription {
+  id: string
+  partner_id: string
+  plan_id: string
+  status: SubscriptionStatus
+  current_period_start: string | null
+  current_period_end: string | null
+  monthly_db_used: number
+  created_at: string
+  updated_at: string
+}
