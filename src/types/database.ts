@@ -57,6 +57,7 @@ export interface Partner {
 
 export interface Referral {
   id: string
+  advertiser_id: string | null // 소속 광고주
   name: string
   name_masked?: string
   phone: string | null
@@ -72,6 +73,7 @@ export interface Referral {
 
 export interface Settlement {
   id: string
+  advertiser_id: string | null // 소속 광고주
   type?: SettlementType
   partner_id: string
   referral_id: string | null
@@ -93,6 +95,7 @@ export interface PartnerStats {
 // 캠페인 설정
 export interface Campaign {
   id: string
+  advertiser_id: string | null // 소속 광고주
   name: string
   is_active: boolean
   valid_amount: number
@@ -174,6 +177,74 @@ export interface PartnerSubscription {
   current_period_start: string | null
   current_period_end: string | null
   monthly_db_used: number
+  created_at: string
+  updated_at: string
+}
+
+// 웹훅 연동 설정
+export type WebhookSource = 'recatch' | 'salesmap' | 'custom'
+
+export interface WebhookIntegration {
+  id: string
+  advertiser_id: string
+  name: string
+  source: WebhookSource
+  api_key: string
+  api_secret: string
+  webhook_url: string | null
+  is_active: boolean
+  config: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
+// 파트너 API 키
+export interface PartnerApiKey {
+  id: string
+  partner_id: string
+  advertiser_id: string
+  name: string
+  api_key: string
+  rate_limit_monthly: number
+  requests_this_month: number
+  last_used_at: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+// API 사용량 로그
+export type ApiSourceType = 'partner_api' | 'webhook'
+
+export interface ApiUsageLog {
+  id: string
+  source_type: ApiSourceType
+  source_id: string | null
+  endpoint: string | null
+  method: string | null
+  status_code: number | null
+  ip_address: string | null
+  user_agent: string | null
+  request_body: Record<string, unknown> | null
+  response_summary: string | null
+  created_at: string
+}
+
+// 파트너 추천 링크
+export interface PartnerLink {
+  id: string
+  partner_id: string
+  advertiser_id: string
+  name: string
+  base_url: string
+  utm_source: string | null
+  utm_medium: string | null
+  utm_campaign: string | null
+  utm_term: string | null
+  utm_content: string | null
+  short_code: string | null
+  is_active: boolean
+  click_count: number
   created_at: string
   updated_at: string
 }

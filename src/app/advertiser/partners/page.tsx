@@ -1,8 +1,108 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+
+interface Partner {
+  id: string
+  name: string
+  email: string
+  phone: string | null
+  status: 'pending' | 'approved' | 'rejected'
+  tier: 'authorized' | 'silver' | 'gold' | 'platinum'
+  referral_code: string
+  channels: string[] | null
+  created_at: string
+}
+
+const statusLabels: Record<string, { label: string; color: string }> = {
+  pending: { label: '대기', color: 'bg-yellow-100 text-yellow-800' },
+  approved: { label: '승인', color: 'bg-green-100 text-green-800' },
+  rejected: { label: '거절', color: 'bg-red-100 text-red-800' },
+}
+
+const tierLabels: Record<string, { label: string; color: string }> = {
+  authorized: { label: 'Authorized', color: 'bg-slate-100 text-slate-800' },
+  silver: { label: 'Silver', color: 'bg-gray-200 text-gray-800' },
+  gold: { label: 'Gold', color: 'bg-yellow-200 text-yellow-800' },
+  platinum: { label: 'Platinum', color: 'bg-purple-200 text-purple-800' },
+}
 
 export default function AdvertiserPartnersPage() {
+  const [partners, setPartners] = useState<Partner[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+
+  useEffect(() => {
+    fetchPartners()
+  }, [])
+
+  const fetchPartners = async () => {
+    try {
+      const response = await fetch('/api/advertiser/partners')
+      if (response.ok) {
+        const data = await response.json()
+        setPartners(data.partners || [])
+      }
+    } catch (error) {
+      console.error('Partners fetch error:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleStatusChange = async (partnerId: string, newStatus: 'approved' | 'rejected') => {
+    try {
+      const response = await fetch(`/api/advertiser/partners/${partnerId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (response.ok) {
+        setPartners(prev =>
+          prev.map(p => p.id === partnerId ? { ...p, status: newStatus } : p)
+        )
+      }
+    } catch (error) {
+      console.error('Status change error:', error)
+    }
+  }
+
+  const filteredPartners = partners.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.email.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = statusFilter === 'all' || p.status === statusFilter
+    return matchesSearch && matchesStatus
+  })
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-8 w-48 bg-slate-200 rounded animate-pulse" />
+        <Card className="p-6">
+          <div className="space-y-4">
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="h-12 bg-slate-200 rounded animate-pulse" />
+            ))}
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -10,11 +110,118 @@ export default function AdvertiserPartnersPage() {
         <p className="text-slate-500 mt-1">파트너 목록 및 승인 관리</p>
       </div>
 
-      <Card className="p-6">
-        <div className="text-center py-12 text-slate-500">
-          <div className="text-5xl mb-4">👥</div>
-          <p>파트너 관리 기능 준비 중입니다</p>
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <Input
+          placeholder="이름 또는 이메일로 검색..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-sm"
+        />
+        <div className="flex gap-2">
+          <Button
+            variant={statusFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setStatusFilter('all')}
+          >
+            전체
+          </Button>
+          <Button
+            variant={statusFilter === 'pending' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setStatusFilter('pending')}
+          >
+            대기
+          </Button>
+          <Button
+            variant={statusFilter === 'approved' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setStatusFilter('approved')}
+          >
+            승인
+          </Button>
+          <Button
+            variant={statusFilter === 'rejected' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setStatusFilter('rejected')}
+          >
+            거절
+          </Button>
         </div>
+      </div>
+
+      {/* Partners Table */}
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>이름</TableHead>
+              <TableHead>이메일</TableHead>
+              <TableHead>상태</TableHead>
+              <TableHead>티어</TableHead>
+              <TableHead>추천 코드</TableHead>
+              <TableHead>가입일</TableHead>
+              <TableHead className="text-right">관리</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredPartners.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-12 text-slate-500">
+                  {partners.length === 0 ? '등록된 파트너가 없습니다' : '검색 결과가 없습니다'}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredPartners.map((partner) => (
+                <TableRow key={partner.id}>
+                  <TableCell className="font-medium">{partner.name}</TableCell>
+                  <TableCell>{partner.email}</TableCell>
+                  <TableCell>
+                    <Badge className={statusLabels[partner.status]?.color}>
+                      {statusLabels[partner.status]?.label}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={tierLabels[partner.tier]?.color}>
+                      {tierLabels[partner.tier]?.label}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <code className="text-xs bg-slate-100 px-2 py-1 rounded">
+                      {partner.referral_code}
+                    </code>
+                  </TableCell>
+                  <TableCell>
+                    {new Date(partner.created_at).toLocaleDateString('ko-KR')}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {partner.status === 'pending' ? (
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          size="sm"
+                          onClick={() => handleStatusChange(partner.id, 'approved')}
+                        >
+                          승인
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleStatusChange(partner.id, 'rejected')}
+                        >
+                          거절
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="outline">
+                        상세
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </Card>
     </div>
   )
