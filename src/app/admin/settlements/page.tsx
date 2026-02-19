@@ -201,11 +201,22 @@ export default function AdminSettlementsPage() {
       return
     }
 
+    const amount = parseInt(newSettlement.amount)
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('금액은 0보다 큰 숫자여야 합니다')
+      return
+    }
+
+    if (amount > 100000000) {
+      toast.error('금액이 너무 큽니다 (1억원 이하)')
+      return
+    }
+
     const supabase = createClient()
     const { error } = await supabase.from('settlements').insert({
       partner_id: newSettlement.partner_id,
       referral_id: newSettlement.referral_id || null,
-      amount: parseInt(newSettlement.amount),
+      amount: amount,
       status: 'pending',
     })
 

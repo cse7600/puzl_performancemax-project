@@ -66,8 +66,8 @@ function SecurityForm() {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
-        <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Shield className="w-8 h-8 text-orange-500" />
+        <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Shield className="w-8 h-8 text-indigo-600" />
         </div>
         <CardTitle className="text-2xl">보안 상담 문의</CardTitle>
         <CardDescription>
@@ -117,7 +117,7 @@ function SecurityForm() {
                 placeholder="문의하실 내용을 입력해주세요"
                 value={inquiry}
                 onChange={(e) => setInquiry(e.target.value)}
-                className="w-full min-h-[100px] pl-10 pr-3 py-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full min-h-[100px] pl-10 pr-3 py-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
           </div>
@@ -127,13 +127,13 @@ function SecurityForm() {
           )}
 
           <p className="text-xs text-gray-500">
-            문의 신청 시 <a href="/privacy" className="text-orange-500 hover:underline">개인정보처리방침</a>에
+            문의 신청 시 <a href="/privacy" className="text-indigo-600 hover:underline">개인정보처리방침</a>에
             동의하는 것으로 간주됩니다.
           </p>
 
           <Button
             type="submit"
-            className="w-full bg-orange-500 hover:bg-orange-600"
+            className="w-full bg-indigo-600 hover:bg-indigo-700"
             disabled={loading}
           >
             {loading ? '처리 중...' : '상담 신청하기'}
@@ -144,7 +144,7 @@ function SecurityForm() {
           <p className="text-sm text-gray-500 mb-2">급하신 분은 전화로 문의해주세요</p>
           <a
             href="tel:1588-5452"
-            className="text-lg font-bold text-orange-500 hover:underline"
+            className="text-lg font-bold text-indigo-600 hover:underline"
           >
             1588-5452
           </a>
@@ -160,8 +160,8 @@ export default function SecurityPage() {
       <div className="max-w-4xl mx-auto">
         {/* 헤더 */}
         <div className="text-center mb-8">
-          <h1 className="text-orange-500 text-3xl font-bold mb-2">KEEPER</h1>
-          <p className="text-gray-600">한화비전 보안 솔루션</p>
+          <h1 className="text-indigo-600 text-3xl font-bold mb-2">Referio</h1>
+          <p className="text-gray-600">B2B 어필리에이트 플랫폼</p>
         </div>
 
         {/* 폼 */}
@@ -177,7 +177,7 @@ export default function SecurityPage() {
 
         {/* 하단 정보 */}
         <div className="mt-12 text-center text-sm text-gray-500">
-          <p>© 2025 한화비전. All rights reserved.</p>
+          <p>© 2026 Referio. All rights reserved.</p>
         </div>
       </div>
     </div>

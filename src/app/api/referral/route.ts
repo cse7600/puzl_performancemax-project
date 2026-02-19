@@ -21,12 +21,16 @@ export async function POST(request: NextRequest) {
       .from('partner_api_keys')
       .select(`
         *,
-        partners!inner(id, referral_code, advertiser_id, status),
+        partners!inner(id, name, referral_code, advertiser_id, status),
         advertisers!inner(id, advertiser_id)
       `)
       .eq('api_key', apiKey)
       .eq('is_active', true)
       .single()
+
+    // Supabase !inner join with .single() returns object, not array
+    const partnerData = apiKeyData?.partners as unknown as { id: string; name: string; referral_code: string; advertiser_id: string; status: string } | undefined
+    const advertiserData = apiKeyData?.advertisers as unknown as { id: string; advertiser_id: string } | undefined
 
     if (apiKeyError || !apiKeyData) {
       await supabase.from('api_usage_logs').insert({
@@ -45,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 파트너 상태 확인
-    if (apiKeyData.partners.status !== 'approved') {
+    if (partnerData!.status !== 'approved') {
       return NextResponse.json(
         { error: '승인된 파트너만 API를 사용할 수 있습니다' },
         { status: 403 }
@@ -130,7 +134,7 @@ export async function POST(request: NextRequest) {
         partner_id: apiKeyData.partner_id,
         name,
         phone: phone || null,
-        referral_code_input: apiKeyData.partners.referral_code,
+        referral_code_input: partnerData!.referral_code,
         inquiry: inquiry || null,
         contract_status: 'pending',
         is_valid: null,
@@ -223,11 +227,13 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const partner = apiKeyData.partners as unknown as { name: string; referral_code: string; status: string }
+
     return NextResponse.json({
       valid: true,
       key_name: apiKeyData.name,
-      partner_name: apiKeyData.partners.name,
-      partner_status: apiKeyData.partners.status,
+      partner_name: partner.name,
+      partner_status: partner.status,
       rate_limit: apiKeyData.rate_limit_monthly,
       requests_used: apiKeyData.requests_this_month,
       requests_remaining: apiKeyData.rate_limit_monthly - apiKeyData.requests_this_month,

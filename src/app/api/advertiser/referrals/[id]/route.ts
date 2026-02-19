@@ -16,7 +16,6 @@ export async function PATCH(
       )
     }
 
-    // 권한 확인
     if (!canManage(session)) {
       return NextResponse.json(
         { error: '권한이 없습니다' },
@@ -26,14 +25,14 @@ export async function PATCH(
 
     const { id } = await params
     const body = await request.json()
-    const { contract_status, is_valid, sales_rep } = body
+    const { contract_status, is_valid, sales_rep, memo, labels, priority, next_action, next_action_at } = body
 
     const supabase = await createClient()
 
-    // 해당 광고주의 피추천인인지 확인
+    // 해당 광고주의 피추천인인지 확인 (이전 상태도 가져옴)
     const { data: referral, error: referralError } = await supabase
       .from('referrals')
-      .select('id, advertiser_id, partner_id')
+      .select('id, advertiser_id, partner_id, contract_status, is_valid, contracted_at')
       .eq('id', id)
       .eq('advertiser_id', session.advertiserUuid)
       .single()
@@ -45,7 +44,6 @@ export async function PATCH(
       )
     }
 
-    // 업데이트할 필드 구성
     const updateData: Record<string, unknown> = {}
 
     if (contract_status !== undefined) {
@@ -58,7 +56,6 @@ export async function PATCH(
       }
       updateData.contract_status = contract_status
 
-      // 계약 완료 시 날짜 자동 설정
       if (contract_status === 'completed') {
         updateData.contracted_at = new Date().toISOString()
       }
@@ -74,9 +71,12 @@ export async function PATCH(
       updateData.is_valid = is_valid
     }
 
-    if (sales_rep !== undefined) {
-      updateData.sales_rep = sales_rep
-    }
+    if (sales_rep !== undefined) updateData.sales_rep = sales_rep
+    if (memo !== undefined) updateData.memo = memo
+    if (labels !== undefined) updateData.labels = labels
+    if (priority !== undefined) updateData.priority = priority
+    if (next_action !== undefined) updateData.next_action = next_action
+    if (next_action_at !== undefined) updateData.next_action_at = next_action_at
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
@@ -90,6 +90,7 @@ export async function PATCH(
       .from('referrals')
       .update(updateData)
       .eq('id', id)
+      .eq('advertiser_id', session.advertiserUuid)
 
     if (updateError) {
       console.error('Referral update error:', updateError)
@@ -97,6 +98,63 @@ export async function PATCH(
         { error: '고객 정보 수정에 실패했습니다' },
         { status: 500 }
       )
+    }
+
+    // 정산 자동 생성: 상태가 변경되어 정산 조건을 충족할 때
+    const newStatus = updateData.contract_status as string | undefined ?? referral.contract_status
+    const newIsValid = updateData.is_valid as boolean | null | undefined ?? referral.is_valid
+
+    // is_valid=true로 변경되었거나, contract_status=completed로 변경된 경우 정산 생성 시도
+    const shouldCreateSettlement =
+      (is_valid === true && referral.is_valid !== true) ||
+      (contract_status === 'completed' && referral.contract_status !== 'completed')
+
+    if (shouldCreateSettlement && referral.partner_id) {
+      // 파트너의 커미션 조회
+      const { data: enrollment } = await supabase
+        .from('partner_programs')
+        .select('lead_commission, contract_commission')
+        .eq('partner_id', referral.partner_id)
+        .eq('advertiser_id', session.advertiserUuid)
+        .eq('status', 'approved')
+        .single()
+
+      if (enrollment) {
+        // is_valid=true일 때: 유효 정산 생성
+        if (newIsValid === true && is_valid === true) {
+          const { error: settError } = await supabase
+            .from('settlements')
+            .insert({
+              partner_id: referral.partner_id,
+              advertiser_id: session.advertiserUuid,
+              referral_id: id,
+              type: 'valid',
+              amount: enrollment.lead_commission || 0,
+              status: 'pending',
+            })
+          // ON CONFLICT 대신 에러 무시 (이미 존재하면 skip)
+          if (settError && !settError.message.includes('duplicate') && !settError.message.includes('unique')) {
+            console.error('Valid settlement create error:', settError)
+          }
+        }
+
+        // contract_status=completed일 때: 계약 정산 생성
+        if (newStatus === 'completed' && contract_status === 'completed' && newIsValid === true) {
+          const { error: settError } = await supabase
+            .from('settlements')
+            .insert({
+              partner_id: referral.partner_id,
+              advertiser_id: session.advertiserUuid,
+              referral_id: id,
+              type: 'contract',
+              amount: enrollment.contract_commission || 0,
+              status: 'pending',
+            })
+          if (settError && !settError.message.includes('duplicate') && !settError.message.includes('unique')) {
+            console.error('Contract settlement create error:', settError)
+          }
+        }
+      }
     }
 
     return NextResponse.json({ success: true, updated: updateData })
@@ -134,8 +192,7 @@ export async function GET(
         partners (
           id,
           name,
-          referral_code,
-          email
+          referral_code
         )
       `)
       .eq('id', id)

@@ -391,7 +391,7 @@ export default function AdminCampaignsPage() {
               <Input
                 value={campaign.landing_url || ''}
                 onChange={(e) => setCampaign({ ...campaign, landing_url: e.target.value })}
-                placeholder="https://keeper.ceo/security"
+                placeholder="https://referio.kr/security"
               />
             </CardContent>
           </Card>

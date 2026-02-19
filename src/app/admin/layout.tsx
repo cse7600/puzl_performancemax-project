@@ -15,6 +15,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { createClient } from '@/lib/supabase/client'
 
 const NAV_ITEMS = [
   { href: '/admin', label: '대시보드', icon: LayoutDashboard },
@@ -33,10 +34,65 @@ export default function AdminLayout({
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [authenticated, setAuthenticated] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     setMounted(true)
+    checkAuth()
   }, [])
+
+  const checkAuth = async () => {
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (!user) {
+        router.push('/login')
+        return
+      }
+
+      // 파트너 정보 확인 (승인된 파트너만 접근 가능)
+      const { data: partner } = await supabase
+        .from('partners')
+        .select('id, status')
+        .eq('auth_user_id', user.id)
+        .eq('status', 'approved')
+        .single()
+
+      if (!partner) {
+        router.push('/dashboard')
+        return
+      }
+
+      setAuthenticated(true)
+    } catch {
+      router.push('/login')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4" />
+          <p className="text-gray-500 text-sm">권한 확인 중...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!authenticated) {
+    return null
+  }
 
   const NavLinks = ({ onClick }: { onClick?: () => void }) => (
     <>
@@ -87,6 +143,10 @@ export default function AdminLayout({
                 파트너 대시보드로
               </Button>
             </Link>
+            <Button variant="ghost" className="w-full justify-start text-gray-500" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              로그아웃
+            </Button>
           </div>
         </div>
       </aside>
@@ -115,13 +175,17 @@ export default function AdminLayout({
                   <NavLinks onClick={() => setMobileMenuOpen(false)} />
                 </nav>
 
-                <div className="p-4 border-t">
+                <div className="p-4 border-t space-y-2">
                   <Link href="/dashboard">
                     <Button variant="outline" className="w-full justify-start">
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       파트너 대시보드
                     </Button>
                   </Link>
+                  <Button variant="ghost" className="w-full justify-start text-gray-500" onClick={handleLogout}>
+                    <LogOut className="w-4 h-4 mr-2" />
+                    로그아웃
+                  </Button>
                 </div>
               </div>
             </SheetContent>

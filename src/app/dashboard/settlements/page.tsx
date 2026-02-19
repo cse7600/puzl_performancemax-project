@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select'
 import { Search, Wallet, Clock, CheckCircle } from 'lucide-react'
 import type { Partner, Settlement, Referral } from '@/types/database'
+import { useProgram } from '../ProgramContext'
 
 interface SettlementWithReferral extends Settlement {
   referral?: Referral
@@ -35,14 +36,14 @@ export default function SettlementsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterField, setFilterField] = useState<'id' | 'referral'>('id')
   const [activeTab, setActiveTab] = useState<'pending' | 'completed'>('pending')
+  const { selectedProgram } = useProgram()
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchPartner = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
 
       if (user) {
-        // 파트너 정보 가져오기
         const { data: partnerData } = await supabase
           .from('partners')
           .select('*')
@@ -51,26 +52,40 @@ export default function SettlementsPage() {
 
         if (partnerData) {
           setPartner(partnerData)
-
-          // 정산 목록 가져오기 (referral 정보와 조인)
-          const { data: settlementsData } = await supabase
-            .from('settlements')
-            .select(`
-              *,
-              referral:referrals(id, name, name_masked)
-            `)
-            .eq('partner_id', partnerData.id)
-            .order('created_at', { ascending: false })
-
-          if (settlementsData) {
-            setSettlements(settlementsData)
-          }
         }
       }
       setLoading(false)
     }
-    fetchData()
+    fetchPartner()
   }, [])
+
+  // 선택된 프로그램 변경 시 settlements 재조회
+  useEffect(() => {
+    const fetchSettlements = async () => {
+      if (!partner?.id) return
+
+      const supabase = createClient()
+      let query = supabase
+        .from('settlements')
+        .select(`
+          *,
+          referral:referrals(id, name, name_masked)
+        `)
+        .eq('partner_id', partner.id)
+        .order('created_at', { ascending: false })
+
+      if (selectedProgram) {
+        query = query.eq('advertiser_id', selectedProgram.advertiser_id)
+      }
+
+      const { data: settlementsData } = await query
+
+      if (settlementsData) {
+        setSettlements(settlementsData)
+      }
+    }
+    fetchSettlements()
+  }, [partner?.id, selectedProgram])
 
   // 탭별 필터링
   const filteredByTab = settlements.filter((settlement) => {
@@ -121,11 +136,20 @@ export default function SettlementsPage() {
     )
   }
 
+  const programLabel = selectedProgram
+    ? (selectedProgram.advertisers as unknown as { program_name: string | null; company_name: string }).program_name ||
+      (selectedProgram.advertisers as unknown as { company_name: string }).company_name
+    : null
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold">지급</h1>
-        <p className="text-gray-500 mt-1">정산 내역을 확인하세요</p>
+        <p className="text-gray-500 mt-1">
+          {programLabel
+            ? `${programLabel} - 정산 내역`
+            : '정산 내역을 확인하세요'}
+        </p>
       </div>
 
       {/* 통계 카드 */}

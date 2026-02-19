@@ -24,8 +24,8 @@ export default function AdvertiserLayout({
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
-  // 로그인 페이지는 인증 체크 스킵
-  const isLoginPage = pathname === '/advertiser/login'
+  // 로그인/가입 페이지는 인증 체크 스킵
+  const isLoginPage = pathname === '/advertiser/login' || pathname === '/advertiser/signup'
 
   useEffect(() => {
     if (isLoginPage) {
@@ -90,7 +90,11 @@ export default function AdvertiserLayout({
     { href: '/advertiser/partners', icon: '👥', label: '파트너 관리' },
     { href: '/advertiser/referrals', icon: '📋', label: '고객 관리' },
     { href: '/advertiser/settlements', icon: '💰', label: '정산 관리' },
+    { href: '/advertiser/credits', icon: '💳', label: '크레딧' },
+    { href: '/advertiser/plan', icon: '👑', label: '요금제' },
+    { href: '/advertiser/collaborations', icon: '🤝', label: '콘텐츠 협업' },
     { href: '/advertiser/campaigns', icon: '📢', label: '캠페인' },
+    { href: '/advertiser/messages', icon: '💬', label: '파트너 메시지' },
     { href: '/advertiser/settings', icon: '⚙️', label: '설정' },
   ]
 

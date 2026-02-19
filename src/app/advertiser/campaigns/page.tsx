@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from 'sonner'
 
 interface Campaign {
   id: string
@@ -128,7 +129,7 @@ export default function AdvertiserCampaignsPage() {
           <div className="text-center py-12 text-slate-500">
             <div className="text-5xl mb-4">📢</div>
             <p>캠페인이 없습니다. 새 캠페인을 생성하세요.</p>
-            <Button className="mt-4">캠페인 생성</Button>
+            <Button className="mt-4" onClick={() => toast.info('준비 중인 기능입니다')}>캠페인 생성</Button>
           </div>
         </Card>
       </div>
@@ -439,7 +440,7 @@ export default function AdvertiserCampaignsPage() {
           <Card className="p-6 space-y-6">
             <div className="flex justify-between items-center">
               <h3 className="font-medium">진행 중인 프로모션</h3>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => toast.info('준비 중인 기능입니다')}>
                 + 프로모션 추가
               </Button>
             </div>

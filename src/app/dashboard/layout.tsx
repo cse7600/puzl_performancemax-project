@@ -13,6 +13,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import {
   Home,
@@ -22,17 +29,56 @@ import {
   Menu,
   LogOut,
   ChevronDown,
+  Building,
+  Mail,
+  Handshake,
 } from 'lucide-react'
 import type { Partner } from '@/types/database'
+import { ProgramProvider, useProgram } from './ProgramContext'
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: '홈', icon: Home },
+  { href: '/dashboard/programs', label: '프로그램', icon: Building },
   { href: '/dashboard/customers', label: '고객', icon: Users },
   { href: '/dashboard/settlements', label: '지급', icon: Wallet },
+  { href: '/dashboard/collaborations', label: '콘텐츠 협업', icon: Handshake },
+  { href: '/dashboard/messages', label: '메시지', icon: Mail },
   { href: '/dashboard/profile', label: '활동정보', icon: User },
 ]
 
-export default function DashboardLayout({
+function ProgramSwitcher() {
+  const { programs, selectedProgram, selectProgram } = useProgram()
+
+  const approvedPrograms = programs.filter(p => p.status === 'approved')
+
+  if (approvedPrograms.length === 0) return null
+
+  return (
+    <div className="px-4 pb-2">
+      <p className="text-xs text-gray-400 mb-1.5 px-1">프로그램</p>
+      <Select
+        value={selectedProgram?.id || ''}
+        onValueChange={selectProgram}
+      >
+        <SelectTrigger className="w-full text-sm h-9">
+          <SelectValue placeholder="프로그램 선택" />
+        </SelectTrigger>
+        <SelectContent>
+          {approvedPrograms.map((p) => {
+            const advData = p.advertisers as unknown as { company_name: string; program_name: string | null }
+            return (
+              <SelectItem key={p.id} value={p.id}>
+                {advData.program_name || advData.company_name}
+              </SelectItem>
+            )
+          })}
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
+
+function DashboardContent({
   children,
 }: {
   children: React.ReactNode
@@ -84,7 +130,7 @@ export default function DashboardLayout({
             onClick={onClick}
             className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
               isActive
-                ? 'bg-orange-100 text-orange-600 font-medium'
+                ? 'bg-indigo-50 text-indigo-600 font-medium'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -103,9 +149,17 @@ export default function DashboardLayout({
         <div className="flex flex-col flex-grow bg-white border-r">
           {/* Logo */}
           <div className="flex items-center h-16 px-6 border-b">
-            <Link href="/dashboard" className="text-orange-500 text-xl font-bold">
-              keeper mate
+            <Link href="/dashboard" className="flex items-center gap-2">
+              <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-xs">R</span>
+              </div>
+              <span className="text-slate-900 text-lg font-bold">Referio</span>
             </Link>
+          </div>
+
+          {/* Program Switcher */}
+          <div className="pt-4">
+            <ProgramSwitcher />
           </div>
 
           {/* Navigation */}
@@ -121,7 +175,7 @@ export default function DashboardLayout({
                   <Button variant="ghost" className="w-full justify-between">
                     <div className="flex items-center gap-3">
                       <Avatar className="w-8 h-8">
-                        <AvatarFallback className="bg-orange-100 text-orange-600 text-sm">
+                        <AvatarFallback className="bg-indigo-50 text-indigo-600 text-sm">
                           {partner?.name?.charAt(0) || '?'}
                         </AvatarFallback>
                       </Avatar>
@@ -145,7 +199,7 @@ export default function DashboardLayout({
               </DropdownMenu>
             ) : (
               <div className="flex items-center gap-3 px-3 py-2">
-                <div className="w-8 h-8 rounded-full bg-orange-100" />
+                <div className="w-8 h-8 rounded-full bg-indigo-50" />
                 <span className="text-sm text-gray-400">로딩중...</span>
               </div>
             )}
@@ -155,11 +209,14 @@ export default function DashboardLayout({
 
       {/* Mobile Header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b z-50 flex items-center justify-between px-4">
-        <Link href="/dashboard" className="text-orange-500 text-xl font-bold">
-          keeper mate
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-xs">R</span>
+          </div>
+          <span className="text-slate-900 text-lg font-bold">Referio</span>
         </Link>
 
-{mounted && (
+        {mounted && (
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -170,7 +227,7 @@ export default function DashboardLayout({
               <div className="flex flex-col h-full">
                 <div className="flex items-center gap-3 p-4 border-b">
                   <Avatar className="w-10 h-10">
-                    <AvatarFallback className="bg-orange-100 text-orange-600">
+                    <AvatarFallback className="bg-indigo-50 text-indigo-600">
                       {partner?.name?.charAt(0) || '?'}
                     </AvatarFallback>
                   </Avatar>
@@ -178,6 +235,10 @@ export default function DashboardLayout({
                     <p className="font-medium">{partner?.name || '로딩중...'}</p>
                     <p className="text-xs text-gray-500">{partner?.email}</p>
                   </div>
+                </div>
+
+                <div className="pt-4">
+                  <ProgramSwitcher />
                 </div>
 
                 <nav className="flex-1 p-4 space-y-1">
@@ -207,5 +268,35 @@ export default function DashboardLayout({
         </div>
       </main>
     </div>
+  )
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const [partnerId, setPartnerId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchPartnerId = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data } = await supabase
+          .from('partners')
+          .select('id')
+          .eq('auth_user_id', user.id)
+          .single()
+        if (data) setPartnerId(data.id)
+      }
+    }
+    fetchPartnerId()
+  }, [])
+
+  return (
+    <ProgramProvider partnerId={partnerId}>
+      <DashboardContent>{children}</DashboardContent>
+    </ProgramProvider>
   )
 }

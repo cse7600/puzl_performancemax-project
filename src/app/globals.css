@@ -123,3 +123,35 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Range slider custom styles */
+.referio-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  outline: none;
+}
+
+.referio-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #4f46e5;
+  border: 3px solid white;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.referio-range::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #4f46e5;
+  border: 3px solid white;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}

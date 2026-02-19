@@ -62,7 +62,7 @@ export async function getAdvertiserSession(): Promise<AdvertiserUser | null> {
 
     if (userError || !user) {
       // 레거시 advertisers 테이블에서 시도
-      const advertisers = session.advertisers as {
+      const advertisers = session.advertisers as unknown as {
         id: string
         advertiser_id: string
         company_name: string
@@ -83,7 +83,7 @@ export async function getAdvertiserSession(): Promise<AdvertiserUser | null> {
       }
     }
 
-    const advertisers = session.advertisers as {
+    const advertisers = session.advertisers as unknown as {
       id: string
       advertiser_id: string
       company_name: string

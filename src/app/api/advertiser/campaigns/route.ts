@@ -142,11 +142,12 @@ export async function PUT(request: NextRequest) {
 
     // 티어 규칙 업데이트 (기존 삭제 후 재생성)
     if (tierRules && Array.isArray(tierRules)) {
-      // 기존 규칙 삭제
+      // 기존 규칙 삭제 (advertiser_id 필터 포함)
       await supabase
         .from('tier_rules')
         .delete()
         .eq('campaign_id', campaign.id)
+        .eq('advertiser_id', session.advertiserUuid)
 
       // 새 규칙 삽입
       const newRules = tierRules

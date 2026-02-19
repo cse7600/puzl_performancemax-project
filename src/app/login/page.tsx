@@ -2,17 +2,19 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Mail, CheckCircle } from 'lucide-react'
+import { Mail, Lock } from 'lucide-react'
 
 export default function LoginPage() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -22,38 +24,46 @@ export default function LoginPage() {
 
     const supabase = createClient()
 
-    const { error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
+      password,
     })
 
     if (error) {
-      setError(error.message)
-    } else {
-      setSent(true)
+      if (error.message === 'Invalid login credentials') {
+        setError('이메일 또는 비밀번호가 올바르지 않습니다')
+      } else if (error.message === 'Email not confirmed') {
+        setError('이메일 인증이 완료되지 않았습니다. 메일함을 확인해주세요')
+      } else {
+        setError(error.message)
+      }
+      setLoading(false)
+      return
     }
-    setLoading(false)
+
+    router.push('/dashboard')
   }
 
   return (
     <div className="min-h-screen flex">
-      {/* 좌측 오렌지 배경 */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-orange-500 to-orange-600 p-12 flex-col justify-between">
-        <div>
-          <h1 className="text-white text-3xl font-bold">keeper mate</h1>
+      {/* 좌측 배경 */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-950 to-slate-900 p-12 flex-col justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+            <span className="text-indigo-600 font-bold text-sm">R</span>
+          </div>
+          <span className="text-white text-xl font-bold">Referio</span>
         </div>
         <div className="text-white">
           <h2 className="text-4xl font-bold mb-4">
-            함께 성장하는<br />파트너가 되어주세요
+            추천으로 연결되는<br />B2B 파트너 네트워크
           </h2>
-          <p className="text-orange-100 text-lg">
-            키퍼와 함께 보안 시장의 새로운 기회를 만들어보세요
+          <p className="text-slate-400 text-lg">
+            프로그램에 참여하고, 추천 링크로 수익을 만드세요
           </p>
         </div>
-        <div className="text-orange-200 text-sm">
-          © 2025 한화비전 키퍼. All rights reserved.
+        <div className="text-slate-500 text-sm">
+          &copy; 2025 Referio. All rights reserved.
         </div>
       </div>
 
@@ -61,69 +71,82 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-8 bg-gray-50">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <div className="lg:hidden mb-4">
-              <h1 className="text-orange-500 text-2xl font-bold">keeper mate</h1>
+            <div className="lg:hidden mb-4 flex items-center justify-center gap-2">
+              <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-xs">R</span>
+              </div>
+              <span className="text-slate-900 text-xl font-bold">Referio</span>
             </div>
-            <CardTitle className="text-2xl">로그인</CardTitle>
+            <CardTitle className="text-2xl">파트너 로그인</CardTitle>
             <CardDescription>
-              이메일을 입력하면 로그인 링크를 보내드립니다
+              이메일과 비밀번호를 입력해주세요
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {sent ? (
-              <div className="text-center py-8">
-                <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">이메일을 확인해주세요</h3>
-                <p className="text-gray-600 mb-4">
-                  <span className="font-medium">{email}</span>로<br />
-                  로그인 링크를 보내드렸습니다
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => setSent(false)}
-                  className="mt-4"
-                >
-                  다른 이메일로 시도
-                </Button>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">이메일</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
               </div>
-            ) : (
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">이메일</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="your@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
-                  </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">비밀번호</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="비밀번호 입력"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
                 </div>
+              </div>
 
-                {error && (
-                  <p className="text-red-500 text-sm">{error}</p>
-                )}
+              {error && (
+                <p className="text-red-500 text-sm">{error}</p>
+              )}
 
-                <Button
-                  type="submit"
-                  className="w-full bg-orange-500 hover:bg-orange-600"
-                  disabled={loading}
-                >
-                  {loading ? '전송 중...' : '로그인 링크 받기'}
-                </Button>
+              <Button
+                type="submit"
+                className="w-full bg-indigo-600 hover:bg-indigo-700"
+                disabled={loading}
+              >
+                {loading ? '로그인 중...' : '로그인'}
+              </Button>
 
-                <div className="text-center text-sm text-gray-600">
-                  아직 메이트가 아니시라고요?{' '}
-                  <Link href="/signup" className="text-orange-500 hover:underline font-medium">
-                    가입하기
-                  </Link>
-                </div>
-              </form>
-            )}
+              <div className="text-center text-sm text-gray-600">
+                아직 파트너가 아니신가요?{' '}
+                <Link href="/signup" className="text-slate-900 hover:underline font-medium">
+                  파트너 가입하기
+                </Link>
+              </div>
+              <div className="text-center text-sm text-gray-400">
+                <Link href="/advertiser/login" className="hover:text-slate-600 transition-colors">
+                  광고주 로그인 &rarr;
+                </Link>
+              </div>
+
+              {/* 테스트 계정 안내 (출시 전 제거) */}
+              <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                <p className="text-xs font-semibold text-amber-800 mb-1">테스트 계정</p>
+                <p className="text-xs text-amber-700">test-partner@keeper-mate.com</p>
+                <p className="text-xs text-amber-700">Test1234pass</p>
+              </div>
+            </form>
           </CardContent>
         </Card>
       </div>

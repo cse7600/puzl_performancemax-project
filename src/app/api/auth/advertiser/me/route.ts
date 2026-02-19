@@ -29,7 +29,17 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const advertiser = session.advertisers as any
+    const advertiser = session.advertisers as unknown as {
+      id: string
+      advertiser_id: string
+      company_name: string
+      user_id: string
+      logo_url: string | null
+      primary_color: string | null
+      contact_email: string | null
+      contact_phone: string | null
+      status: string
+    }
 
     // 계정 상태 확인
     if (advertiser.status !== 'active') {

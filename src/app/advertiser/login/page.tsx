@@ -131,9 +131,10 @@ export default function AdvertiserLoginPage() {
           </Button>
         </form>
 
+        {process.env.NODE_ENV === 'development' && (
         <div className="pt-4 border-t border-slate-200">
           <div className="bg-slate-50 rounded-lg p-4 space-y-2">
-            <p className="text-xs font-medium text-slate-600">데모 계정</p>
+            <p className="text-xs font-medium text-slate-600">데모 계정 (개발 전용)</p>
             <div className="text-xs text-slate-500 space-y-1">
               <p>광고주 ID: <code className="bg-slate-200 px-1 rounded">hanwha_vision</code></p>
               <p>사용자 ID: <code className="bg-slate-200 px-1 rounded">admin</code></p>
@@ -141,13 +142,23 @@ export default function AdvertiserLoginPage() {
             </div>
           </div>
         </div>
+        )}
 
-        <div className="text-center">
+        <div className="text-center space-y-2">
+          <div className="text-sm text-slate-600">
+            광고주 계정이 없으신가요?{' '}
+            <button
+              onClick={() => router.push('/advertiser/signup')}
+              className="text-blue-600 hover:underline font-medium"
+            >
+              무료로 시작하기
+            </button>
+          </div>
           <button
             onClick={() => router.push('/login')}
-            className="text-sm text-blue-600 hover:underline"
+            className="text-sm text-slate-400 hover:underline"
           >
-            파트너 로그인으로 이동 →
+            파트너 로그인으로 이동 &rarr;
           </button>
         </div>
       </Card>

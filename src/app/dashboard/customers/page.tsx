@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select'
 import { Search, Users } from 'lucide-react'
 import type { Partner, Referral } from '@/types/database'
+import { useProgram } from '../ProgramContext'
 
 export default function CustomersPage() {
   const [partner, setPartner] = useState<Partner | null>(null)
@@ -29,14 +30,14 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterField, setFilterField] = useState<'name' | 'phone'>('name')
+  const { selectedProgram } = useProgram()
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchPartner = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
 
       if (user) {
-        // 파트너 정보 가져오기
         const { data: partnerData } = await supabase
           .from('partners')
           .select('*')
@@ -45,23 +46,37 @@ export default function CustomersPage() {
 
         if (partnerData) {
           setPartner(partnerData)
-
-          // 피추천인 목록 가져오기
-          const { data: referralsData } = await supabase
-            .from('referrals')
-            .select('*')
-            .eq('partner_id', partnerData.id)
-            .order('created_at', { ascending: false })
-
-          if (referralsData) {
-            setReferrals(referralsData)
-          }
         }
       }
       setLoading(false)
     }
-    fetchData()
+    fetchPartner()
   }, [])
+
+  // 선택된 프로그램 변경 시 referrals 재조회
+  useEffect(() => {
+    const fetchReferrals = async () => {
+      if (!partner?.id) return
+
+      const supabase = createClient()
+      let query = supabase
+        .from('referrals')
+        .select('*')
+        .eq('partner_id', partner.id)
+        .order('created_at', { ascending: false })
+
+      if (selectedProgram) {
+        query = query.eq('advertiser_id', selectedProgram.advertiser_id)
+      }
+
+      const { data: referralsData } = await query
+
+      if (referralsData) {
+        setReferrals(referralsData)
+      }
+    }
+    fetchReferrals()
+  }, [partner?.id, selectedProgram])
 
   // 필터링된 피추천인 목록
   const filteredReferrals = referrals.filter((referral) => {
@@ -95,11 +110,20 @@ export default function CustomersPage() {
     )
   }
 
+  const programLabel = selectedProgram
+    ? (selectedProgram.advertisers as unknown as { program_name: string | null; company_name: string }).program_name ||
+      (selectedProgram.advertisers as unknown as { company_name: string }).company_name
+    : null
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold">고객</h1>
-        <p className="text-gray-500 mt-1">내 추천으로 유입된 고객 목록입니다</p>
+        <p className="text-gray-500 mt-1">
+          {programLabel
+            ? `${programLabel} - 추천으로 유입된 고객 목록`
+            : '내 추천으로 유입된 고객 목록입니다'}
+        </p>
       </div>
 
       {/* 통계 카드 */}

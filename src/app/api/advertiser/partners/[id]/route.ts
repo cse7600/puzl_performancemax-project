@@ -26,47 +26,98 @@ export async function PATCH(
 
     const { id } = await params
     const body = await request.json()
-    const { status } = body
-
-    if (!status || !['approved', 'rejected', 'pending'].includes(status)) {
-      return NextResponse.json(
-        { error: '유효하지 않은 상태값입니다' },
-        { status: 400 }
-      )
-    }
+    const { status, tier, lead_commission, contract_commission } = body
 
     const supabase = await createClient()
 
-    // 해당 광고주의 파트너인지 확인
-    const { data: partner, error: partnerError } = await supabase
-      .from('partners')
-      .select('id, advertiser_id')
-      .eq('id', id)
+    // partner_programs에서 해당 파트너의 프로그램 참가 레코드 확인
+    const { data: program, error: programError } = await supabase
+      .from('partner_programs')
+      .select('id, partner_id, advertiser_id, status')
+      .eq('partner_id', id)
       .eq('advertiser_id', session.advertiserUuid)
       .single()
 
-    if (partnerError || !partner) {
+    if (programError || !program) {
       return NextResponse.json(
         { error: '파트너를 찾을 수 없습니다' },
         { status: 404 }
       )
     }
 
-    // 상태 업데이트
+    // 업데이트할 필드 구성
+    const updateData: Record<string, unknown> = {}
+
+    if (status) {
+      if (!['approved', 'rejected', 'pending'].includes(status)) {
+        return NextResponse.json(
+          { error: '유효하지 않은 상태값입니다' },
+          { status: 400 }
+        )
+      }
+      // 승인 시 파트너 수 제한 체크
+      if (status === 'approved' && program.status !== 'approved') {
+        const { data: advData } = await supabase
+          .from('advertisers')
+          .select('plan_id, advertiser_plans(max_partners)')
+          .eq('id', session.advertiserUuid)
+          .single()
+
+        const maxPartners = (advData?.advertiser_plans as unknown as { max_partners: number })?.max_partners || 5
+
+        const { count: currentCount } = await supabase
+          .from('partner_programs')
+          .select('id', { count: 'exact', head: true })
+          .eq('advertiser_id', session.advertiserUuid)
+          .eq('status', 'approved')
+
+        if ((currentCount || 0) >= maxPartners) {
+          return NextResponse.json(
+            { error: `현재 플랜의 파트너 수 제한(${maxPartners}명)에 도달했습니다. 플랜을 업그레이드해주세요.` },
+            { status: 400 }
+          )
+        }
+      }
+
+      updateData.status = status
+      if (status === 'approved') updateData.approved_at = new Date().toISOString()
+    }
+
+    if (tier) {
+      if (!['authorized', 'silver', 'gold', 'platinum'].includes(tier)) {
+        return NextResponse.json(
+          { error: '유효하지 않은 티어입니다' },
+          { status: 400 }
+        )
+      }
+      updateData.tier = tier
+    }
+
+    if (lead_commission !== undefined) updateData.lead_commission = lead_commission
+    if (contract_commission !== undefined) updateData.contract_commission = contract_commission
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: '업데이트할 내용이 없습니다' },
+        { status: 400 }
+      )
+    }
+
+    // partner_programs 업데이트
     const { error: updateError } = await supabase
-      .from('partners')
-      .update({ status })
-      .eq('id', id)
+      .from('partner_programs')
+      .update(updateData)
+      .eq('id', program.id)
 
     if (updateError) {
-      console.error('Partner update error:', updateError)
+      console.error('Partner program update error:', updateError)
       return NextResponse.json(
         { error: '파트너 상태 변경에 실패했습니다' },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ success: true, status })
+    return NextResponse.json({ success: true, ...updateData })
 
   } catch (error) {
     console.error('Partner PATCH error:', error)
@@ -94,21 +145,24 @@ export async function GET(
     const { id } = await params
     const supabase = await createClient()
 
-    const { data: partner, error } = await supabase
-      .from('partners')
-      .select('*')
-      .eq('id', id)
+    const { data: program, error } = await supabase
+      .from('partner_programs')
+      .select(`
+        *,
+        partners!inner(id, name, channels, main_channel_link, created_at)
+      `)
+      .eq('partner_id', id)
       .eq('advertiser_id', session.advertiserUuid)
       .single()
 
-    if (error || !partner) {
+    if (error || !program) {
       return NextResponse.json(
         { error: '파트너를 찾을 수 없습니다' },
         { status: 404 }
       )
     }
 
-    return NextResponse.json({ partner })
+    return NextResponse.json({ partner: program })
 
   } catch (error) {
     console.error('Partner GET error:', error)

@@ -114,7 +114,7 @@ export default function OnboardingPage() {
             <p className="text-sm text-gray-500">
               승인이 완료되면 이메일로 안내해 드릴게요.
             </p>
-            <p className="text-sm text-orange-500 mt-4">
+            <p className="text-sm text-blue-600 mt-4">
               잠시 후 대시보드로 이동합니다...
             </p>
           </CardContent>
@@ -127,7 +127,12 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-gray-50 py-12 px-4">
       <div className="max-w-lg mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-orange-500 text-2xl font-bold mb-2">keeper mate</h1>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-xs">R</span>
+            </div>
+            <span className="text-slate-900 text-xl font-bold">Referio</span>
+          </div>
           <p className="text-gray-600">추가 정보를 입력해주세요</p>
         </div>
 
@@ -224,7 +229,7 @@ export default function OnboardingPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-orange-500 hover:bg-orange-600"
+                className="w-full bg-indigo-600 hover:bg-indigo-700"
                 disabled={loading || selectedChannels.length === 0}
               >
                 {loading ? '제출 중...' : '제출하기'}

@@ -15,9 +15,28 @@ export async function GET() {
 
     const supabase = await createClient()
 
-    const { data: partners, error } = await supabase
-      .from('partners')
-      .select('*')
+    // partner_programs를 통해 파트너 조회 (다대다 관계)
+    const { data: enrollments, error } = await supabase
+      .from('partner_programs')
+      .select(`
+        id,
+        status,
+        tier,
+        referral_code,
+        lead_commission,
+        contract_commission,
+        monthly_fee,
+        applied_at,
+        approved_at,
+        created_at,
+        partners!inner(
+          id,
+          name,
+          channels,
+          main_channel_link,
+          created_at
+        )
+      `)
       .eq('advertiser_id', session.advertiserUuid)
       .order('created_at', { ascending: false })
 
@@ -28,6 +47,29 @@ export async function GET() {
         { status: 500 }
       )
     }
+
+    // 기존 응답 형태와 호환되게 평탄화
+    const partners = (enrollments || []).map(e => {
+      const partnerData = e.partners as unknown as {
+        id: string
+        name: string
+        channels: string[] | null
+        main_channel_link: string | null
+        created_at: string
+      }
+      return {
+        ...partnerData,
+        status: e.status,
+        tier: e.tier,
+        referral_code: e.referral_code,
+        lead_commission: e.lead_commission,
+        contract_commission: e.contract_commission,
+        monthly_fee: e.monthly_fee,
+        program_id: e.id,
+        applied_at: e.applied_at,
+        approved_at: e.approved_at,
+      }
+    })
 
     return NextResponse.json({ partners })
 

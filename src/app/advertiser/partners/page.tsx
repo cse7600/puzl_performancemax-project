@@ -17,12 +17,11 @@ import { Badge } from '@/components/ui/badge'
 interface Partner {
   id: string
   name: string
-  email: string
-  phone: string | null
   status: 'pending' | 'approved' | 'rejected'
   tier: 'authorized' | 'silver' | 'gold' | 'platinum'
   referral_code: string
   channels: string[] | null
+  main_channel_link: string | null
   created_at: string
 }
 
@@ -83,7 +82,7 @@ export default function AdvertiserPartnersPage() {
 
   const filteredPartners = partners.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.email.toLowerCase().includes(searchTerm.toLowerCase())
+      (p.channels || []).some(c => c.toLowerCase().includes(searchTerm.toLowerCase()))
     const matchesStatus = statusFilter === 'all' || p.status === statusFilter
     return matchesSearch && matchesStatus
   })
@@ -113,7 +112,7 @@ export default function AdvertiserPartnersPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <Input
-          placeholder="이름 또는 이메일로 검색..."
+          placeholder="파트너 이름으로 검색..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
@@ -156,7 +155,7 @@ export default function AdvertiserPartnersPage() {
           <TableHeader>
             <TableRow>
               <TableHead>이름</TableHead>
-              <TableHead>이메일</TableHead>
+              <TableHead>채널</TableHead>
               <TableHead>상태</TableHead>
               <TableHead>티어</TableHead>
               <TableHead>추천 코드</TableHead>
@@ -175,7 +174,20 @@ export default function AdvertiserPartnersPage() {
               filteredPartners.map((partner) => (
                 <TableRow key={partner.id}>
                   <TableCell className="font-medium">{partner.name}</TableCell>
-                  <TableCell>{partner.email}</TableCell>
+                  <TableCell>
+                    {partner.channels && partner.channels.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {partner.channels.slice(0, 2).map((ch, i) => (
+                          <Badge key={i} variant="secondary" className="text-xs">{ch}</Badge>
+                        ))}
+                        {partner.channels.length > 2 && (
+                          <span className="text-xs text-slate-400">+{partner.channels.length - 2}</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 text-sm">-</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge className={statusLabels[partner.status]?.color}>
                       {statusLabels[partner.status]?.label}
@@ -195,7 +207,7 @@ export default function AdvertiserPartnersPage() {
                     {new Date(partner.created_at).toLocaleDateString('ko-KR')}
                   </TableCell>
                   <TableCell className="text-right">
-                    {partner.status === 'pending' ? (
+                    {partner.status === 'pending' && (
                       <div className="flex gap-2 justify-end">
                         <Button
                           size="sm"
@@ -211,9 +223,14 @@ export default function AdvertiserPartnersPage() {
                           거절
                         </Button>
                       </div>
-                    ) : (
-                      <Button size="sm" variant="outline">
-                        상세
+                    )}
+                    {partner.status === 'rejected' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleStatusChange(partner.id, 'approved')}
+                      >
+                        재승인
                       </Button>
                     )}
                   </TableCell>

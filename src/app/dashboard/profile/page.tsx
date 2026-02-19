@@ -20,7 +20,12 @@ import {
   Save,
   Copy,
   Check,
+  Clock,
+  X,
+  ArrowRight,
 } from 'lucide-react'
+import { toast } from 'sonner'
+import { useProgram } from '@/app/dashboard/ProgramContext'
 import type { Partner } from '@/types/database'
 
 const TIER_COLORS: Record<string, string> = {
@@ -37,10 +42,16 @@ const TIER_LABELS: Record<string, string> = {
   platinum: 'Platinum',
 }
 
+const PROGRAM_STATUS: Record<string, { label: string; icon: React.ReactNode; className: string }> = {
+  approved: { label: '참가중', icon: <Check className="w-3 h-3" />, className: 'bg-green-100 text-green-700' },
+  pending: { label: '승인 대기', icon: <Clock className="w-3 h-3" />, className: 'bg-yellow-100 text-yellow-700' },
+  rejected: { label: '반려됨', icon: <X className="w-3 h-3" />, className: 'bg-red-100 text-red-700' },
+}
+
 const GUIDES = [
-  { title: '활동 가이드 보기', href: '#' },
-  { title: '다른 파트너들은 어떻게 활동할까?', href: '#' },
-  { title: '이달의 프로모션 살펴보기', href: '#' },
+  { title: '활동 가이드 보기', href: '/dashboard/guides' },
+  { title: '다른 파트너들은 어떻게 활동할까?', href: '/dashboard/guides#tips' },
+  { title: '이달의 프로모션 살펴보기', href: '/dashboard/guides#promotion' },
 ]
 
 export default function ProfilePage() {
@@ -48,7 +59,9 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [copiedProgramId, setCopiedProgramId] = useState<string | null>(null)
   const [editMode, setEditMode] = useState(false)
+  const { programs } = useProgram()
 
   // 수정 가능한 필드들
   const [bankName, setBankName] = useState('')
@@ -116,6 +129,14 @@ export default function ProfilePage() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }
+  }
+
+  const handleCopyProgramLink = async (refCode: string, programId: string) => {
+    const link = `https://referio.kr/security?ref=${refCode}`
+    await navigator.clipboard.writeText(link)
+    setCopiedProgramId(programId)
+    toast.success('추천 링크가 복사되었습니다')
+    setTimeout(() => setCopiedProgramId(null), 2000)
   }
 
   if (loading) {
@@ -229,6 +250,113 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
+      {/* 내 참여 프로그램 */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">내 참여 프로그램</CardTitle>
+              <CardDescription>
+                참여 중인 프로그램과 추천 링크를 확인하세요
+              </CardDescription>
+            </div>
+            <a href="/dashboard/programs">
+              <Button variant="outline" size="sm">
+                프로그램 둘러보기
+                <ArrowRight className="w-3.5 h-3.5 ml-1" />
+              </Button>
+            </a>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {programs.length === 0 ? (
+            <div className="text-center py-8">
+              <Building className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 text-sm">아직 참여 중인 프로그램이 없습니다</p>
+              <a href="/dashboard/programs">
+                <Button className="mt-3 bg-indigo-600 hover:bg-indigo-700" size="sm">
+                  프로그램 참가하기
+                </Button>
+              </a>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {programs.map((prog) => {
+                const status = PROGRAM_STATUS[prog.status]
+                const isApproved = prog.status === 'approved'
+                const isPending = prog.status === 'pending'
+                const refLink = `https://referio.kr/security?ref=${prog.referral_code}`
+
+                return (
+                  <div
+                    key={prog.id}
+                    className={`rounded-lg border p-4 ${
+                      isApproved ? 'border-green-200 bg-green-50/50' :
+                      isPending ? 'border-yellow-200 bg-yellow-50/50' :
+                      'border-gray-200 bg-gray-50/50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium text-sm truncate">
+                            {prog.advertisers.program_name || prog.advertisers.company_name}
+                          </p>
+                          {status && (
+                            <Badge className={`shrink-0 text-[11px] ${status.className}`}>
+                              {status.icon}
+                              <span className="ml-1">{status.label}</span>
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500">{prog.advertisers.company_name}</p>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <p className="text-[11px] text-gray-500">커미션</p>
+                        <p className="text-xs font-medium">
+                          <span className="text-blue-600">DB ₩{(prog.lead_commission || 0).toLocaleString()}</span>
+                          {' / '}
+                          <span className="text-purple-600">계약 ₩{(prog.contract_commission || 0).toLocaleString()}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 승인된 프로그램: 추천 링크 표시 */}
+                    {isApproved && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <code className="flex-1 text-xs text-green-800 bg-green-100 px-3 py-2 rounded truncate">
+                          {refLink}
+                        </code>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0 h-8 text-green-700 border-green-300 hover:bg-green-100"
+                          onClick={() => handleCopyProgramLink(prog.referral_code, prog.id)}
+                        >
+                          {copiedProgramId === prog.id ? (
+                            <><Check className="w-3.5 h-3.5 mr-1" />복사됨</>
+                          ) : (
+                            <><Copy className="w-3.5 h-3.5 mr-1" />링크 복사</>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* 대기 중인 프로그램: 안내 메시지 */}
+                    {isPending && (
+                      <p className="mt-2 text-xs text-yellow-700 bg-yellow-100 rounded px-3 py-1.5">
+                        광고주가 참가 신청을 검토 중입니다. 승인되면 추천 링크가 발급됩니다.
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* 정산 정보 (수정 가능) */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -289,7 +417,7 @@ export default function ProfilePage() {
                 <Button
                   onClick={handleSave}
                   disabled={saving}
-                  className="bg-orange-500 hover:bg-orange-600"
+                  className="bg-indigo-600 hover:bg-indigo-700"
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {saving ? '저장 중...' : '저장하기'}

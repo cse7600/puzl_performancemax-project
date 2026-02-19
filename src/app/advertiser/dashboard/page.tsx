@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 
 interface DashboardStats {
@@ -26,6 +27,7 @@ export default function AdvertiserDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [activities, setActivities] = useState<RecentActivity[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchDashboardData()
@@ -33,14 +35,18 @@ export default function AdvertiserDashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
+      setError(null)
       const response = await fetch('/api/advertiser/dashboard')
       if (response.ok) {
         const data = await response.json()
         setStats(data.stats)
         setActivities(data.activities || [])
+      } else {
+        setError('데이터를 불러오는데 실패했습니다')
       }
     } catch (error) {
       console.error('Dashboard data fetch error:', error)
+      setError('서버에 연결할 수 없습니다')
     } finally {
       setLoading(false)
     }
@@ -83,6 +89,23 @@ export default function AdvertiserDashboardPage() {
             </Card>
           ))}
         </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">대시보드</h1>
+        </div>
+        <Card className="p-12 text-center">
+          <div className="text-4xl mb-4">&#x26A0;&#xFE0F;</div>
+          <p className="text-slate-600 mb-4">{error}</p>
+          <Button onClick={fetchDashboardData} variant="outline">
+            다시 시도
+          </Button>
+        </Card>
       </div>
     )
   }

@@ -60,8 +60,14 @@ export async function POST(request: NextRequest) {
 
     const rawBody = await request.text()
 
-    // 서명 검증
-    if (integration.api_secret && signature) {
+    // 서명 검증 (api_secret이 설정된 경우 signature 필수)
+    if (integration.api_secret) {
+      if (!signature) {
+        return NextResponse.json(
+          { error: '서명이 필요합니다' },
+          { status: 401 }
+        )
+      }
       if (!verifySignature(rawBody, signature, integration.api_secret)) {
         return NextResponse.json(
           { error: '서명 검증 실패' },
@@ -73,6 +79,12 @@ export async function POST(request: NextRequest) {
     // 타임스탬프 검증
     if (timestamp) {
       const requestTime = parseInt(timestamp)
+      if (isNaN(requestTime)) {
+        return NextResponse.json(
+          { error: '유효하지 않은 타임스탬프입니다' },
+          { status: 400 }
+        )
+      }
       const currentTime = Math.floor(Date.now() / 1000)
       if (Math.abs(currentTime - requestTime) > 300) {
         return NextResponse.json(
@@ -140,7 +152,13 @@ export async function POST(request: NextRequest) {
       'duplicate': 'duplicate',
     }
 
-    const contractStatus = statusMapping[status?.toLowerCase()] || status || 'completed'
+    const contractStatus = statusMapping[status?.toLowerCase()]
+    if (!contractStatus) {
+      return NextResponse.json(
+        { error: '유효하지 않은 계약 상태입니다. completed, contracted, won, invalid, lost, duplicate 중 하나를 사용하세요.' },
+        { status: 400 }
+      )
+    }
 
     // 리드 상태 업데이트
     const updateData: Record<string, unknown> = {

@@ -17,6 +17,17 @@ export interface Advertiser {
   primary_color: string | null // 브랜드 색상
   contact_email: string | null
   contact_phone: string | null
+  program_name: string | null
+  program_description: string | null
+  default_lead_commission: number
+  default_contract_commission: number
+  is_public: boolean
+  category: string | null
+  homepage_url: string | null
+  activity_guide: string | null
+  content_sources: string | null
+  prohibited_activities: string | null
+  precautions: string | null
   created_at: string
   updated_at: string
 }
@@ -53,6 +64,23 @@ export interface Partner {
   marketing_consent: boolean
   created_at: string
   auth_user_id: string | null
+}
+
+// 파트너 프로그램 (다대다 관계)
+export interface PartnerProgram {
+  id: string
+  partner_id: string
+  advertiser_id: string
+  status: PartnerStatus
+  tier: PartnerTier
+  referral_code: string
+  lead_commission: number
+  contract_commission: number
+  monthly_fee: number
+  applied_at: string
+  approved_at: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface Referral {
@@ -227,6 +255,64 @@ export interface ApiUsageLog {
   user_agent: string | null
   request_body: Record<string, unknown> | null
   response_summary: string | null
+  created_at: string
+}
+
+// 파트너 메시지
+export interface PartnerMessage {
+  id: string
+  advertiser_id: string
+  title: string
+  body: string
+  target_type: 'all' | 'tier' | 'specific'
+  target_tier: string | null
+  target_partner_ids: string[] | null
+  sent_at: string
+}
+
+export interface PartnerMessageRead {
+  id: string
+  message_id: string
+  partner_id: string
+  read_at: string
+}
+
+// 브랜디드 콘텐츠 협업
+export type ContentType = 'blog' | 'youtube' | 'instagram' | 'tiktok' | 'other'
+export type CollabStatus = 'requested' | 'accepted' | 'in_progress' | 'submitted' | 'revision' | 'completed' | 'paid' | 'declined' | 'cancelled'
+
+export interface ContentCollaboration {
+  id: string
+  advertiser_id: string
+  partner_id: string
+  title: string
+  brief: string
+  content_type: ContentType
+  budget: number
+  platform_fee_rate: number
+  platform_fee: number
+  partner_payout: number
+  deadline: string | null
+  status: CollabStatus
+  deliverable_url: string | null
+  deliverable_note: string | null
+  decline_reason: string | null
+  cancel_reason: string | null
+  requested_at: string
+  accepted_at: string | null
+  submitted_at: string | null
+  completed_at: string | null
+  paid_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CollaborationMessage {
+  id: string
+  collaboration_id: string
+  sender_type: 'advertiser' | 'partner'
+  sender_id: string
+  message: string
   created_at: string
 }
 

@@ -61,8 +61,14 @@ export async function POST(request: NextRequest) {
 
     const rawBody = await request.text()
 
-    // 서명 검증 (선택적 - secret이 있는 경우만)
-    if (integration.api_secret && signature) {
+    // 서명 검증 (api_secret이 설정된 경우 signature 필수)
+    if (integration.api_secret) {
+      if (!signature) {
+        return NextResponse.json(
+          { error: '서명이 필요합니다' },
+          { status: 401 }
+        )
+      }
       if (!verifySignature(rawBody, signature, integration.api_secret)) {
         return NextResponse.json(
           { error: '서명 검증 실패' },
@@ -74,6 +80,12 @@ export async function POST(request: NextRequest) {
     // 타임스탬프 검증 (5분 이내)
     if (timestamp) {
       const requestTime = parseInt(timestamp)
+      if (isNaN(requestTime)) {
+        return NextResponse.json(
+          { error: '유효하지 않은 타임스탬프입니다' },
+          { status: 400 }
+        )
+      }
       const currentTime = Math.floor(Date.now() / 1000)
       if (Math.abs(currentTime - requestTime) > 300) {
         return NextResponse.json(
@@ -95,18 +107,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // ref_code로 파트너 조회
+    // ref_code로 파트너 조회 (partner_programs 우선, 레거시 fallback)
     let partnerId = null
     if (ref_code) {
-      const { data: partner } = await supabase
-        .from('partners')
-        .select('id')
+      // partner_programs에서 먼저 조회
+      const { data: program } = await supabase
+        .from('partner_programs')
+        .select('partner_id')
         .eq('referral_code', ref_code)
         .eq('advertiser_id', integration.advertiser_id)
         .eq('status', 'approved')
         .single()
 
-      partnerId = partner?.id || null
+      if (program) {
+        partnerId = program.partner_id
+      } else {
+        // 레거시 fallback: partners 테이블에서 조회
+        const { data: partner } = await supabase
+          .from('partners')
+          .select('id')
+          .eq('referral_code', ref_code)
+          .eq('advertiser_id', integration.advertiser_id)
+          .eq('status', 'approved')
+          .single()
+
+        partnerId = partner?.id || null
+      }
     }
 
     // 중복 체크 (같은 연락처가 최근에 등록되었는지)
