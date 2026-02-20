@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Ad, AdSnapshot, MonitorKeyword, RankChange } from '@/lib/types';
+import { Ad, AdSnapshot, MonitorKeyword, RankChange, KeywordSearchVolume } from '@/lib/types';
 import AdCard from '@/components/AdCard';
 import KeywordSidebar from '@/components/KeywordManager';
 
@@ -31,6 +31,8 @@ export default function Dashboard() {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<MonitorKeyword[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [searchVolume, setSearchVolume] = useState<KeywordSearchVolume | null>(null);
+  const [volumeLoading, setVolumeLoading] = useState(false);
 
   const loadData = useCallback(async (q: string, p: Platform) => {
     setIsLoading(true);
@@ -47,7 +49,6 @@ export default function Dashboard() {
         setLastUpdated(ts ? new Date(ts).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : null);
       }
       if (changesJson.success) {
-        // Keep only the most recent change per advertiser
         const seen = new Set<string>();
         const latest: RankChange[] = [];
         for (const c of (changesJson.data ?? [])) {
@@ -72,8 +73,23 @@ export default function Dashboard() {
     }
   }, []);
 
+  const loadSearchVolume = useCallback(async (q: string) => {
+    setVolumeLoading(true);
+    setSearchVolume(null);
+    try {
+      const res = await fetch(`/api/keyword-stats?keyword=${encodeURIComponent(q)}`);
+      const json = await res.json();
+      if (json.success && json.data) setSearchVolume(json.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setVolumeLoading(false);
+    }
+  }, []);
+
   useEffect(() => { loadData(query, platform); }, [query, platform, loadData]);
   useEffect(() => { loadKeywords(); }, [loadKeywords]);
+  useEffect(() => { loadSearchVolume(query); }, [query, loadSearchVolume]);
 
   const handleScrape = async () => {
     setIsScraping(true);
@@ -88,6 +104,8 @@ export default function Dashboard() {
       if (json.success) {
         setScrapeMsg(`완료 · PC ${json.pc.count}개 · Mobile ${json.mobile.count}개`);
         await loadData(query, platform);
+        // 수집 후 검색량도 새로고침 (비동기로 저장됐을 것)
+        setTimeout(() => loadSearchVolume(query), 3000);
       } else {
         setScrapeMsg(`오류: ${json.error}`);
       }
@@ -100,13 +118,11 @@ export default function Dashboard() {
 
   const currentSnapshot = latestData?.[platform];
   const ads: Ad[] = currentSnapshot?.ads || [];
-
-  // Map rankChanges by advertiser for quick lookup
   const changeMap = new Map(rankChanges.map((c) => [c.advertiser, c]));
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* ── Header ──────────────────────────────────────────────────────── */}
+      {/* ── Header ── */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shrink-0">
         <div className="flex items-center gap-3 px-4 py-3">
           <button
@@ -160,7 +176,7 @@ export default function Dashboard() {
         )}
       </header>
 
-      {/* ── Body ────────────────────────────────────────────────────────── */}
+      {/* ── Body ── */}
       <div className="flex flex-1 overflow-hidden">
 
         {/* Sidebar */}
@@ -171,12 +187,59 @@ export default function Dashboard() {
               activeKeyword={query}
               onRefresh={loadKeywords}
               onSelectKeyword={setQuery}
+              activeSection="monitor"
             />
           </div>
         )}
 
         {/* Main */}
         <main className="flex-1 overflow-y-auto px-5 py-5 min-w-0">
+
+          {/* ── 키워드 검색량 요약 카드 ── */}
+          <div className="mb-4 bg-white border border-gray-200 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm font-semibold text-gray-700">🔢 키워드 월간 검색량</h2>
+              {searchVolume && (
+                <span className="text-xs text-gray-400">
+                  {new Date(searchVolume.fetched_at).toLocaleDateString('ko-KR')} 기준
+                </span>
+              )}
+            </div>
+
+            {volumeLoading ? (
+              <div className="flex items-center gap-2 text-xs text-gray-400 py-1">
+                <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                검색량 불러오는 중...
+              </div>
+            ) : searchVolume ? (
+              <div className="flex flex-wrap gap-3">
+                <VolumeChip label="네이버 PC" value={searchVolume.pc_volume} color="blue" />
+                <VolumeChip label="네이버 모바일" value={searchVolume.mobile_volume} color="blue" />
+                <VolumeChip label="네이버 합계" value={searchVolume.total_volume} color="indigo" bold />
+                {searchVolume.google_volume !== null && (
+                  <VolumeChip label="구글" value={searchVolume.google_volume} color="green" />
+                )}
+                {searchVolume.competition && (
+                  <div className="flex items-center gap-1 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200">
+                    <span className="text-xs text-gray-500">경쟁도</span>
+                    <span className="text-xs font-semibold text-gray-700">{searchVolume.competition}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400">
+                아직 수집된 검색량이 없습니다.
+                <span className="ml-1 text-blue-500 cursor-pointer hover:underline"
+                  onClick={handleScrape}>
+                  ▶ 지금 수집
+                </span>
+                을 누르면 광고 수집과 함께 자동으로 저장됩니다.
+              </p>
+            )}
+          </div>
 
           {/* PC / Mobile tabs */}
           <div className="flex gap-1 mb-4 bg-white border border-gray-200 rounded-lg p-1 w-fit">
@@ -212,14 +275,12 @@ export default function Dashboard() {
             </div>
           ) : (
             <>
-              {/* ── 광고주 요약 테이블 (상단) ── */}
+              {/* ── 광고주 순위 테이블 ── */}
               <div className="mb-5 bg-white border border-gray-200 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-sm font-semibold text-gray-700">📈 광고주 순위 현황</h2>
                   {rankChanges.length > 0 && (
-                    <span className="text-xs text-gray-400">
-                      직전 수집 대비 변동 표시
-                    </span>
+                    <span className="text-xs text-gray-400">직전 수집 대비 변동 표시</span>
                   )}
                 </div>
                 <div className="overflow-x-auto">
@@ -288,6 +349,25 @@ export default function Dashboard() {
           )}
         </main>
       </div>
+    </div>
+  );
+}
+
+function VolumeChip({ label, value, color, bold }: { label: string; value: number; color: string; bold?: boolean }) {
+  const colorCls =
+    color === 'indigo' ? 'bg-indigo-50 border-indigo-200' :
+    color === 'green'  ? 'bg-green-50 border-green-200' :
+    'bg-blue-50 border-blue-200';
+  const textCls =
+    color === 'indigo' ? 'text-indigo-700' :
+    color === 'green'  ? 'text-green-700' :
+    'text-blue-700';
+  return (
+    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${colorCls}`}>
+      <span className="text-xs text-gray-500">{label}</span>
+      <span className={`text-xs ${bold ? 'font-bold text-sm' : 'font-semibold'} ${textCls}`}>
+        {value.toLocaleString()}
+      </span>
     </div>
   );
 }
