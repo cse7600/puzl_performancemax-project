@@ -6,11 +6,15 @@ import {
   getPreviousSnapshot,
   getDueKeywords,
   updateKeywordLastRun,
+  upsertKeywordSearchVolume,
 } from '@/lib/supabase';
+import { getNaverKeywordStats } from '@/lib/naver-keyword';
+import { getGoogleKeywordStats } from '@/lib/google-keyword';
 
-export const maxDuration = 300; // 5분 (여러 키워드 순환)
+export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
+/** 광고 스크래핑 + 순위 변동 저장 */
 async function runScrape(query: string) {
   const result = await scrapeNaverAds(query);
 
@@ -31,6 +35,11 @@ async function runScrape(query: string) {
     await savePrevRankChanges(mobileSnapshotId, query, 'mobile', changes, result.monitoredAt);
   }
 
+  // 키워드 검색량 수집 (비동기 — 실패해도 스크래핑 결과에 영향 없음)
+  fetchAndSaveKeywordVolume(query).catch((err) =>
+    console.error('[Scrape] Keyword volume fetch failed:', err)
+  );
+
   return {
     query,
     monitoredAt: result.monitoredAt,
@@ -39,7 +48,31 @@ async function runScrape(query: string) {
   };
 }
 
-// Manual single-keyword scrape
+/** 키워드 검색량 조회 후 Supabase 저장 */
+async function fetchAndSaveKeywordVolume(query: string): Promise<void> {
+  const [naverStats, googleMap] = await Promise.all([
+    getNaverKeywordStats([query]),
+    getGoogleKeywordStats([query]),
+  ]);
+
+  for (const stat of naverStats) {
+    const google = googleMap.get(stat.keyword);
+    await upsertKeywordSearchVolume({
+      keyword: stat.keyword,
+      pc_volume: stat.pcVolume,
+      mobile_volume: stat.mobileVolume,
+      total_volume: stat.totalVolume,
+      google_volume: google?.googleVolume ?? null,
+      google_competition: google?.googleCompetition ?? null,
+      competition: stat.competition,
+      avg_depth: stat.avgDepth,
+      pc_ctr: stat.pcAvgCtr,
+      mobile_ctr: stat.mobileAvgCtr,
+    });
+  }
+}
+
+// 수동 단일 키워드 수집
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
@@ -54,7 +87,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Vercel Cron: iterate all due keywords
+// Vercel Cron: 예약된 키워드 순환 수집
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
   if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
