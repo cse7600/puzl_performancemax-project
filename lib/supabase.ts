@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Ad, AdSnapshot, RankChange, MonitorKeyword } from './types';
+import { Ad, AdSnapshot, RankChange, MonitorKeyword, KeywordSearchVolume } from './types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -116,7 +116,7 @@ export async function getPreviousSnapshot(
   return data ?? null;
 }
 
-// ── Keyword management ─────────────────────────────────────────────────────────
+// ── Keyword management ──────────────────────────────────────────────────────
 
 export async function getKeywords(): Promise<MonitorKeyword[]> {
   const { data } = await supabase
@@ -170,7 +170,6 @@ export async function updateKeywordLastRun(id: string, lastRunAt: string): Promi
     .eq('id', id);
 }
 
-// Returns keywords whose next scheduled run time has arrived
 export async function getDueKeywords(): Promise<MonitorKeyword[]> {
   const { data } = await supabase
     .from('monitor_keywords')
@@ -178,17 +177,58 @@ export async function getDueKeywords(): Promise<MonitorKeyword[]> {
     .eq('enabled', true)
     .or(
       'last_run_at.is.null,' +
-      `last_run_at.lte.${new Date(Date.now() - 60 * 60 * 1000).toISOString()}` // placeholder; filtered below
+      `last_run_at.lte.${new Date(Date.now() - 60 * 60 * 1000).toISOString()}`
     )
     .order('last_run_at', { ascending: true, nullsFirst: true });
 
   if (!data) return [];
 
-  // Filter in JS: last_run_at is null OR (now - last_run_at) >= interval_hours
   const now = Date.now();
   return (data as MonitorKeyword[]).filter((kw) => {
     if (!kw.last_run_at) return true;
-    const elapsed = (now - new Date(kw.last_run_at).getTime()) / (1000 * 60 * 60); // hours
+    const elapsed = (now - new Date(kw.last_run_at).getTime()) / (1000 * 60 * 60);
     return elapsed >= kw.interval_hours;
   });
+}
+
+// ── Keyword search volumes ──────────────────────────────────────────────────
+
+export async function upsertKeywordSearchVolume(
+  data: Omit<KeywordSearchVolume, 'id' | 'fetched_at'>
+): Promise<void> {
+  const { error } = await supabase
+    .from('keyword_search_volumes')
+    .upsert(
+      { ...data, fetched_at: new Date().toISOString() },
+      { onConflict: 'keyword' }
+    );
+  if (error) console.error('Failed to upsert keyword search volume:', error);
+}
+
+export async function getLatestKeywordVolume(
+  keyword: string
+): Promise<KeywordSearchVolume | null> {
+  const { data } = await supabase
+    .from('keyword_search_volumes')
+    .select('*')
+    .eq('keyword', keyword)
+    .order('fetched_at', { ascending: false })
+    .limit(1)
+    .single();
+  return (data as KeywordSearchVolume) ?? null;
+}
+
+export async function getMultipleKeywordVolumes(
+  keywords: string[]
+): Promise<Map<string, KeywordSearchVolume>> {
+  if (keywords.length === 0) return new Map();
+  const { data } = await supabase
+    .from('keyword_search_volumes')
+    .select('*')
+    .in('keyword', keywords);
+  const map = new Map<string, KeywordSearchVolume>();
+  for (const row of (data as KeywordSearchVolume[]) ?? []) {
+    map.set(row.keyword, row);
+  }
+  return map;
 }

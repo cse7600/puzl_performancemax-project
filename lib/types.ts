@@ -52,3 +52,18 @@ export interface MonitorKeyword {
   last_run_at: string | null;
   created_at: string;
 }
+
+export interface KeywordSearchVolume {
+  id: string;
+  keyword: string;
+  pc_volume: number;
+  mobile_volume: number;
+  total_volume: number;
+  google_volume: number | null;
+  google_competition: string | null;
+  competition: string;
+  avg_depth: number;
+  pc_ctr: number;
+  mobile_ctr: number;
+  fetched_at: string;
+}
