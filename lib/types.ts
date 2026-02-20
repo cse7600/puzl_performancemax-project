@@ -43,3 +43,12 @@ export interface ScrapeResult {
   pc: { count: number; ads: Ad[] };
   mobile: { count: number; ads: Ad[] };
 }
+
+export interface MonitorKeyword {
+  id: string;
+  keyword: string;
+  enabled: boolean;
+  interval_hours: 1 | 3 | 6 | 12 | 24;
+  last_run_at: string | null;
+  created_at: string;
+}

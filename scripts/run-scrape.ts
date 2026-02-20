@@ -119,22 +119,16 @@ async function main() {
         if (platformArg !== 'both' && platformArg !== platform) continue;
 
         const ads = platform === 'pc' ? result.pc.ads : result.mobile.ads;
-        const snapshot = await saveSnapshot({
-          query,
-          platform,
-          monitored_at: result.monitoredAt,
-          ads,
-          ad_count: ads.length,
-        });
+        const snapshotId = await saveSnapshot(query, platform, ads, result.monitoredAt);
 
-        if (snapshot) {
-          console.log(`  [${platform.toUpperCase()}] Snapshot saved: ${snapshot.id}`);
+        if (snapshotId) {
+          console.log(`  [${platform.toUpperCase()}] Snapshot saved: ${snapshotId}`);
 
-          const prevSnapshot = await getPreviousSnapshot(query, platform, snapshot.id);
+          const prevSnapshot = await getPreviousSnapshot(query, platform, result.monitoredAt);
           if (prevSnapshot) {
             const changes = detectRankChanges(prevSnapshot.ads, ads);
             const meaningful = changes.filter((c) => c.change_type !== 'same');
-            await savePrevRankChanges(snapshot.id, query, platform, changes);
+            await savePrevRankChanges(snapshotId, query, platform, changes, result.monitoredAt);
             console.log(`  [${platform.toUpperCase()}] ${meaningful.length} rank changes detected`);
           }
         }

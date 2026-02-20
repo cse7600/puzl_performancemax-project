@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Ad, AdSnapshot } from '@/lib/types';
+import { Ad, AdSnapshot, MonitorKeyword } from '@/lib/types';
 import AdCard from '@/components/AdCard';
+import KeywordManager from '@/components/KeywordManager';
 
 type Platform = 'pc' | 'mobile';
 
@@ -20,6 +21,8 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [scrapeMsg, setScrapeMsg] = useState('');
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [showManager, setShowManager] = useState(false);
+  const [keywords, setKeywords] = useState<MonitorKeyword[]>([]);
 
   const loadData = useCallback(async (q: string) => {
     setIsLoading(true);
@@ -30,6 +33,7 @@ export default function Dashboard() {
         setLatestData(json.data);
         const ts = json.data.pc?.monitored_at || json.data.mobile?.monitored_at;
         if (ts) setLastUpdated(new Date(ts).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }));
+        else setLastUpdated(null);
       }
     } catch (err) {
       console.error(err);
@@ -38,9 +42,23 @@ export default function Dashboard() {
     }
   }, []);
 
+  const loadKeywords = useCallback(async () => {
+    try {
+      const res = await fetch('/api/keywords');
+      const json = await res.json();
+      if (json.success) setKeywords(json.data);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
   useEffect(() => {
     loadData(query);
   }, [query, loadData]);
+
+  useEffect(() => {
+    loadKeywords();
+  }, [loadKeywords]);
 
   const handleScrape = async () => {
     setIsScraping(true);
@@ -70,6 +88,12 @@ export default function Dashboard() {
     setQuery(inputQuery.trim());
   };
 
+  const handleSelectKeyword = (kw: string) => {
+    setQuery(kw);
+    setInputQuery(kw);
+    setShowManager(false);
+  };
+
   const currentSnapshot = latestData?.[platform];
   const ads: Ad[] = currentSnapshot?.ads || [];
 
@@ -85,7 +109,7 @@ export default function Dashboard() {
               value={inputQuery}
               onChange={(e) => setInputQuery(e.target.value)}
               placeholder="검색 키워드"
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
               type="submit"
@@ -94,21 +118,33 @@ export default function Dashboard() {
               검색
             </button>
           </form>
-          <button
-            onClick={handleScrape}
-            disabled={isScraping}
-            className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {isScraping ? (
-              <>
-                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                수집 중...
-              </>
-            ) : '▶ 지금 수집'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowManager((v) => !v)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                showManager
+                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              ⚙️ 캠페인{keywords.length > 0 && ` (${keywords.length})`}
+            </button>
+            <button
+              onClick={handleScrape}
+              disabled={isScraping}
+              className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isScraping ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  수집 중...
+                </>
+              ) : '▶ 지금 수집'}
+            </button>
+          </div>
         </div>
         {scrapeMsg && (
           <div className={`text-center text-xs py-1.5 px-4 ${scrapeMsg.includes('오류') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'}`}>
@@ -118,6 +154,15 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6">
+        {/* 캠페인 관리 패널 */}
+        {showManager && (
+          <KeywordManager
+            keywords={keywords}
+            onRefresh={loadKeywords}
+            onSelectKeyword={handleSelectKeyword}
+          />
+        )}
+
         {/* 검색어 + 메타 */}
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <div>

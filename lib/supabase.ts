@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Ad, AdSnapshot, RankChange } from './types';
+import { Ad, AdSnapshot, RankChange, MonitorKeyword } from './types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -114,4 +114,81 @@ export async function getPreviousSnapshot(
     .single();
 
   return data ?? null;
+}
+
+// ── Keyword management ─────────────────────────────────────────────────────────
+
+export async function getKeywords(): Promise<MonitorKeyword[]> {
+  const { data } = await supabase
+    .from('monitor_keywords')
+    .select('*')
+    .order('created_at', { ascending: true });
+  return (data as MonitorKeyword[]) ?? [];
+}
+
+export async function addKeyword(
+  keyword: string,
+  interval_hours: MonitorKeyword['interval_hours']
+): Promise<MonitorKeyword | null> {
+  const { data, error } = await supabase
+    .from('monitor_keywords')
+    .insert({ keyword, interval_hours })
+    .select()
+    .single();
+  if (error) {
+    console.error('Failed to add keyword:', error);
+    return null;
+  }
+  return data as MonitorKeyword;
+}
+
+export async function updateKeyword(
+  id: string,
+  updates: Partial<Pick<MonitorKeyword, 'enabled' | 'interval_hours'>>
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('monitor_keywords')
+    .update(updates)
+    .eq('id', id);
+  if (error) { console.error('Failed to update keyword:', error); return false; }
+  return true;
+}
+
+export async function deleteKeyword(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('monitor_keywords')
+    .delete()
+    .eq('id', id);
+  if (error) { console.error('Failed to delete keyword:', error); return false; }
+  return true;
+}
+
+export async function updateKeywordLastRun(id: string, lastRunAt: string): Promise<void> {
+  await supabase
+    .from('monitor_keywords')
+    .update({ last_run_at: lastRunAt })
+    .eq('id', id);
+}
+
+// Returns keywords whose next scheduled run time has arrived
+export async function getDueKeywords(): Promise<MonitorKeyword[]> {
+  const { data } = await supabase
+    .from('monitor_keywords')
+    .select('*')
+    .eq('enabled', true)
+    .or(
+      'last_run_at.is.null,' +
+      `last_run_at.lte.${new Date(Date.now() - 60 * 60 * 1000).toISOString()}` // placeholder; filtered below
+    )
+    .order('last_run_at', { ascending: true, nullsFirst: true });
+
+  if (!data) return [];
+
+  // Filter in JS: last_run_at is null OR (now - last_run_at) >= interval_hours
+  const now = Date.now();
+  return (data as MonitorKeyword[]).filter((kw) => {
+    if (!kw.last_run_at) return true;
+    const elapsed = (now - new Date(kw.last_run_at).getTime()) / (1000 * 60 * 60); // hours
+    return elapsed >= kw.interval_hours;
+  });
 }
