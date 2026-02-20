@@ -93,7 +93,7 @@ export default function Dashboard() {
 
   const handleScrape = async () => {
     setIsScraping(true);
-    setScrapeMsg('수집 중... (약 60~90초 소요)');
+    setScrapeMsg('수집 요청 중...');
     try {
       const res = await fetch('/api/scrape', {
         method: 'POST',
@@ -101,11 +101,14 @@ export default function Dashboard() {
         body: JSON.stringify({ query }),
       });
       const json = await res.json();
-      if (json.success) {
-        setScrapeMsg(`완료 · PC ${json.pc.count}개 · Mobile ${json.mobile.count}개`);
-        await loadData(query, platform);
-        // 수집 후 검색량도 새로고침 (비동기로 저장됐을 것)
-        setTimeout(() => loadSearchVolume(query), 3000);
+      if (json.success && json.queued) {
+        // GitHub Actions 비동기 실행 — 약 2~3분 후 결과 반영
+        setScrapeMsg('✅ 수집 시작됨. 2~3분 후 자동으로 새로고침됩니다.');
+        setTimeout(async () => {
+          await loadData(query, platform);
+          await loadSearchVolume(query);
+          setScrapeMsg('');
+        }, 180000); // 3분
       } else {
         setScrapeMsg(`오류: ${json.error}`);
       }
