@@ -4,142 +4,217 @@
   <meta charset="UTF-8">
   <title>키워드 검색량 조회</title>
   <style>
-    * { box-sizing: border-box; }
-    body { font-family: sans-serif; max-width: 1200px; margin: 40px auto; padding: 0 20px; background: #f8f8f8; }
-    h1 { font-size: 20px; margin-bottom: 20px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, sans-serif; background: #f2f2f2; padding: 32px 20px; }
 
-    .tabs { display: flex; gap: 0; margin-bottom: 0; }
-    .tab-btn {
-      padding: 10px 28px; font-size: 14px; font-weight: bold; cursor: pointer;
-      border: 1px solid #ccc; border-bottom: none; background: #eee; color: #666;
-      border-radius: 6px 6px 0 0;
-    }
-    .tab-btn.active { background: white; color: #111; border-color: #ccc; }
+    .container { max-width: 1300px; margin: 0 auto; }
+    h1 { font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #111; }
 
-    .form-section {
-      background: white; border: 1px solid #ccc; border-radius: 0 6px 6px 6px;
-      padding: 20px; margin-bottom: 20px;
+    /* 입력 폼 */
+    .form-box {
+      background: white; border-radius: 8px; padding: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 20px;
     }
-    label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 13px; }
+    .form-row { display: flex; gap: 12px; align-items: flex-start; }
     textarea {
-      width: 100%; height: 90px; padding: 8px; font-size: 14px;
-      border: 1px solid #ccc; border-radius: 4px; resize: vertical;
+      flex: 1; height: 80px; padding: 10px 12px; font-size: 14px;
+      border: 1px solid #ddd; border-radius: 6px; resize: vertical;
+      font-family: inherit; line-height: 1.5;
     }
-    .hint { font-size: 11px; color: #888; margin-top: 4px; }
-
-    .options { display: flex; align-items: center; gap: 16px; margin-top: 14px; flex-wrap: wrap; }
-    select { padding: 7px 10px; font-size: 13px; border: 1px solid #ccc; border-radius: 4px; }
-    .btn {
-      padding: 9px 22px; font-size: 14px; font-weight: bold;
-      cursor: pointer; border: none; border-radius: 4px;
+    textarea:focus { outline: none; border-color: #4285F4; }
+    .form-side { display: flex; flex-direction: column; gap: 8px; min-width: 120px; }
+    .btn-search {
+      padding: 0 20px; height: 80px; font-size: 15px; font-weight: 700;
+      border: none; border-radius: 6px; cursor: pointer;
+      background: #4285F4; color: white; white-space: nowrap;
     }
-    .btn-naver  { background: #03C75A; color: white; }
-    .btn-naver:hover  { background: #02a84c; }
-    .btn-google { background: #4285F4; color: white; }
-    .btn-google:hover { background: #2b6fd6; }
-    .btn-download { background: #555; color: white; }
-    .btn-download:hover { background: #333; }
+    .btn-search:hover { background: #2b6fd6; }
+    .btn-search:disabled { background: #aaa; cursor: not-allowed; }
+    .hint { font-size: 11px; color: #999; line-height: 1.5; }
 
+    /* 로딩 */
+    .loading {
+      display: none; text-align: center; padding: 40px;
+      font-size: 14px; color: #666;
+    }
+    .spinner {
+      display: inline-block; width: 20px; height: 20px;
+      border: 3px solid #eee; border-top-color: #4285F4;
+      border-radius: 50%; animation: spin .8s linear infinite;
+      margin-right: 8px; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 오류 */
     .error {
-      background: #fff0f0; border: 1px solid #ffcccc;
-      padding: 10px 14px; border-radius: 4px; color: #cc0000;
-      margin-bottom: 14px; font-size: 13px;
+      background: #fff0f0; border-left: 3px solid #e74c3c;
+      padding: 12px 16px; border-radius: 4px; color: #c0392b;
+      font-size: 13px; margin-bottom: 16px;
     }
 
-    .result-section { background: white; border: 1px solid #ccc; border-radius: 6px; padding: 16px; }
-    .top-bar { display: flex; align-items: center; margin-bottom: 12px; }
+    /* 결과 영역 */
+    .result-box {
+      background: white; border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08); overflow: hidden;
+    }
+    .result-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px; border-bottom: 1px solid #eee;
+    }
     .result-meta { font-size: 13px; color: #555; }
-    .result-meta b { color: #111; }
-
-    .table-wrap { overflow-x: auto; }
-    .result-table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 600px; }
-    .result-table th {
-      padding: 9px 12px; text-align: right; white-space: nowrap;
-      border-bottom: 2px solid #333; background: #333; color: white;
-    }
-    .result-table th:first-child { text-align: left; }
-    .result-table td { padding: 7px 12px; border-bottom: 1px solid #eee; text-align: right; }
-    .result-table td:first-child { text-align: left; }
-    .result-table tr:hover td { background: #f5f5f5; }
-
+    .result-meta b { color: #111; font-size: 15px; }
+    .source-badges { display: flex; gap: 6px; margin-left: 10px; display: inline-flex; }
     .badge {
-      display: inline-block; padding: 2px 8px; border-radius: 10px;
-      font-size: 11px; font-weight: bold; margin-left: 8px; vertical-align: middle;
+      font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+      vertical-align: middle;
     }
-    .badge-naver  { background: #e8fdf0; color: #03C75A; border: 1px solid #b3f0ce; }
-    .badge-google { background: #e8f0fe; color: #4285F4; border: 1px solid #b3ccfc; }
+    .badge-naver { background: #edfaf3; color: #03C75A; border: 1px solid #b3f0ce; }
+    .badge-google { background: #e8f0fe; color: #4285F4; border: 1px solid #c5d8fc; }
+
+    .btn-dl {
+      padding: 7px 16px; font-size: 13px; font-weight: 600;
+      border: 1px solid #ccc; border-radius: 5px; cursor: pointer;
+      background: white; color: #333;
+    }
+    .btn-dl:hover { background: #f5f5f5; }
+
+    /* 테이블 */
+    .table-wrap { overflow-x: auto; }
+    .result-table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 800px; }
+
+    .result-table thead th {
+      padding: 10px 14px; text-align: right; white-space: nowrap;
+      background: #f7f7f7; color: #444; font-weight: 600;
+      border-bottom: 2px solid #e0e0e0; font-size: 12px;
+    }
+    .result-table thead th:first-child { text-align: left; }
+    .result-table thead th.col-naver { color: #02a84c; }
+    .result-table thead th.col-google { color: #4285F4; }
+
+    .result-table tbody td {
+      padding: 9px 14px; border-bottom: 1px solid #f0f0f0;
+      text-align: right; color: #222;
+    }
+    .result-table tbody td:first-child { text-align: left; font-weight: 500; }
+    .result-table tbody tr:hover td { background: #fafafa; }
+
+    /* 구분선: 네이버 컬럼 끝 */
+    .result-table .sep-right { border-right: 2px solid #e0e0e0; }
+
+    /* 구글 검색량 0이면 흐리게 */
+    .dim { color: #bbb; }
+
+    /* 경쟁도 뱃지 */
+    .comp { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 10px; }
+    .comp-low    { background: #edfaf3; color: #03C75A; }
+    .comp-mid    { background: #fff8e6; color: #e8a202; }
+    .comp-high   { background: #fef0f0; color: #e74c3c; }
+    .comp-none   { color: #ccc; }
   </style>
 </head>
 <body>
+<div class="container">
+  <h1>키워드 검색량 조회</h1>
 
-<h1>키워드 검색량 조회</h1>
-
-<form method="POST" action="/" id="main-form">
-  <div class="tabs">
-    <button type="submit" name="platform" value="naver"
-      class="tab-btn {% if platform == 'naver' %}active{% endif %}">
-      네이버 검색광고
-    </button>
-    <button type="submit" name="platform" value="google"
-      class="tab-btn {% if platform == 'google' %}active{% endif %}">
-      구글 Ads
-    </button>
-  </div>
-
-  <div class="form-section">
-    <label>키워드 입력</label>
-    <textarea name="keywords" placeholder="키워드를 한 줄에 하나씩, 또는 콤마(,)로 구분해서 입력&#10;예: 검색광고&#10;퍼포먼스마케팅&#10;네이버광고">{{ keywords_input }}</textarea>
-    <p class="hint">
-      {% if platform == 'naver' %}
-        공백은 자동 제거됩니다 (네이버 API 정책) &nbsp;|&nbsp; 개수 제한 없음, 5개 단위 자동 처리
-      {% else %}
-        구글은 20개 단위로 자동 처리됩니다 &nbsp;|&nbsp; 한국(KR) 기준 월간 검색량
-      {% endif %}
-    </p>
-
-    <div class="options">
-      {% if platform == 'naver' %}
-      <div>
-        <label style="display:inline; font-weight:normal;">조회 방식</label>
-        <select name="show_detail">
-          <option value="1" {% if show_detail == 1 %}selected{% endif %}>상세 (클릭수·클릭률·경쟁도 포함)</option>
-          <option value="0" {% if show_detail == 0 %}selected{% endif %}>간단 (검색수만)</option>
-        </select>
+  <div class="form-box">
+    <form method="POST" action="/" id="search-form">
+      <div class="form-row">
+        <textarea name="keywords"
+          placeholder="키워드를 한 줄에 하나씩 또는 콤마(,)로 구분해 입력&#10;예: 검색광고, 퍼포먼스마케팅, 네이버광고">{{ keywords_input }}</textarea>
+        <div class="form-side">
+          <button type="submit" class="btn-search" id="search-btn">조회</button>
+          <div class="hint">네이버 + 구글<br>동시 조회</div>
+        </div>
       </div>
-      <button type="submit" name="platform" value="naver" class="btn btn-naver">조회</button>
-      {% else %}
-      <input type="hidden" name="show_detail" value="1">
-      <button type="submit" name="platform" value="google" class="btn btn-google">조회</button>
-      {% endif %}
-    </div>
-  </div>
-</form>
-
-{% if error %}
-<div class="error">{{ error }}</div>
-{% endif %}
-
-{% if table_html %}
-<div class="result-section">
-  <div class="top-bar">
-    <div class="result-meta">
-      총 <b>{{ row_count }}</b>개 키워드
-      <span class="badge {% if platform == 'naver' %}badge-naver{% else %}badge-google{% endif %}">
-        {{ '네이버' if platform == 'naver' else 'Google' }}
-      </span>
-    </div>
-    <form method="POST" action="/download" style="margin-left:auto;">
-      <input type="hidden" name="keywords" value="{{ keywords_input }}">
-      <input type="hidden" name="platform" value="{{ platform }}">
-      <input type="hidden" name="show_detail" value="{{ show_detail }}">
-      <button type="submit" class="btn btn-download">CSV 다운로드</button>
     </form>
   </div>
-  <div class="table-wrap">
-    {{ table_html | safe }}
-  </div>
-</div>
-{% endif %}
 
+  <div class="loading" id="loading">
+    <span class="spinner"></span>
+    네이버 · 구글 API 동시 조회 중... (10~20초 소요될 수 있습니다)
+  </div>
+
+  {% if error %}
+  <div class="error">{{ error }}</div>
+  {% endif %}
+
+  {% if table_html %}
+  <div class="result-box">
+    <div class="result-header">
+      <div class="result-meta">
+        총 <b>{{ row_count }}</b>개 키워드
+        <span class="badge badge-naver">네이버</span>
+        <span class="badge badge-google">Google</span>
+      </div>
+      <form method="POST" action="/download">
+        <input type="hidden" name="keywords" value="{{ keywords_input }}">
+        <button type="submit" class="btn-dl">CSV 다운로드</button>
+      </form>
+    </div>
+    <div class="table-wrap" id="table-area">
+      {{ table_html | safe }}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  // 조회 버튼 클릭 시 로딩 표시
+  document.getElementById('search-form').addEventListener('submit', function() {
+    document.getElementById('search-btn').disabled = true;
+    document.getElementById('search-btn').textContent = '조회 중...';
+    document.getElementById('loading').style.display = 'block';
+    const resultBox = document.querySelector('.result-box');
+    if (resultBox) resultBox.style.opacity = '0.3';
+  });
+
+  // 테이블 후처리: 경쟁도 뱃지, 구글 0값 처리
+  (function styleTable() {
+    const table = document.querySelector('.result-table');
+    if (!table) return;
+
+    const headers = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim());
+
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      const cells = tr.querySelectorAll('td');
+      cells.forEach((td, i) => {
+        const header = headers[i] || '';
+        const val = td.textContent.trim();
+
+        // 경쟁도 셀 뱃지화
+        if (header === '경쟁정도' || header === '구글 경쟁도') {
+          if (val === '낮음') td.innerHTML = `<span class="comp comp-low">${val}</span>`;
+          else if (val === '중간') td.innerHTML = `<span class="comp comp-mid">${val}</span>`;
+          else if (val === '높음') td.innerHTML = `<span class="comp comp-high">${val}</span>`;
+          else td.innerHTML = `<span class="comp comp-none">-</span>`;
+        }
+
+        // 구글 검색량 0이면 흐리게
+        if (header === '구글 월간검색수' && (val === '0' || val === '')) {
+          td.classList.add('dim');
+        }
+
+        // 숫자 천단위 콤마
+        if (['PC 월간검색수','모바일 월간검색수','총 월간검색수','구글 월간검색수',
+             'PC 월평균클릭수','모바일 월평균클릭수','월평균노출광고수'].includes(header)) {
+          const n = parseInt(val.replace(/,/g, ''), 10);
+          if (!isNaN(n)) td.textContent = n.toLocaleString();
+        }
+      });
+    });
+
+    // 헤더에 플랫폼 색상 적용
+    table.querySelectorAll('thead th').forEach(th => {
+      const t = th.textContent.trim();
+      if (['PC 월간검색수','모바일 월간검색수','총 월간검색수','경쟁정도',
+           'PC 월평균클릭수','모바일 월평균클릭수','PC 월평균클릭률(%)','모바일 월평균클릭률(%)','월평균노출광고수'].includes(t)) {
+        th.classList.add('col-naver');
+      }
+      if (['구글 월간검색수','구글 경쟁도'].includes(t)) {
+        th.classList.add('col-google');
+      }
+    });
+  })();
+</script>
 </body>
 </html>
