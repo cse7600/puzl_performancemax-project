@@ -1,7 +1,10 @@
 import { Ad, RankChange, ScrapeResult } from './types';
 
 const NAVER_SEARCH_URL = 'https://search.naver.com/search.naver';
-const BADGE_WORDS = ['네이버 로그인', 'Naver Pay', '네이버 아이디', '네이버페이', '서비스 보기'];
+const BADGE_WORDS = [
+  '네이버 로그인', 'Naver Pay', '네이버 아이디', '네이버페이', '서비스 보기',
+  '네이버 톡톡', '네이버 예약', '네이버 지도', '플레이스', '전화 연결', '지도보기',
+];
 
 async function getBrowser() {
   // Vercel serverless: use @sparticuz/chromium-min + playwright-core
@@ -58,32 +61,29 @@ async function followRedirects(
 
 async function extractRawAds(page: { evaluate: (fn: () => Ad[]) => Promise<Ad[]> }): Promise<Ad[]> {
   return await (page as any).evaluate(() => {
-    const BADGE = ['네이버 로그인', 'Naver Pay', '네이버 아이디', '네이버페이', '서비스 보기'];
+    const BADGE = [
+      '네이버 로그인', 'Naver Pay', '네이버 아이디', '네이버페이', '서비스 보기',
+      '네이버 톡톡', '네이버 예약', '네이버 지도', '플레이스', '전화 연결', '지도보기',
+    ];
 
-    let adSection: Element | null = document.querySelector('.sc_new.ad_section, .ad_section');
-    if (!adSection) {
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-      let node: Node | null;
-      while ((node = walker.nextNode())) {
-        if ((node as Text).textContent?.trim() === '관련 광고') {
-          let el = (node as Text).parentElement!;
-          for (let i = 0; i < 10; i++) {
-            if (el.querySelectorAll('li').length >= 2) break;
-            el = el.parentElement || el;
-          }
-          adSection = el;
-          break;
-        }
-      }
-    }
-    if (!adSection) return [];
+    // Select only top-level PowerLink ad items:
+    // - Must have ader.naver.com tracking link (confirms it's a paid ad)
+    // - Parent must be lst_type (PowerLink container), NOT lst_link (sub-link container)
+    // - Must have enough text content to be a real ad
+    const adLis = Array.from(document.querySelectorAll('li')).filter(li => {
+      if (!li.querySelector('a[href*="ader.naver.com"]')) return false;
+      const parentCls = li.parentElement?.className ?? '';
+      if (parentCls.includes('lst_link')) return false;
+      return (li as HTMLElement).innerText.trim().length >= 50;
+    });
+
+    if (adLis.length === 0) return [];
 
     const ads: any[] = [];
     let rank = 0;
 
-    adSection.querySelectorAll('li').forEach((li: Element) => {
+    adLis.forEach((li: Element) => {
       const fullText = (li as HTMLElement).innerText.trim();
-      if (fullText.length < 50) return;
       rank++;
 
       const adAnchors = Array.from(li.querySelectorAll('a[href*="ader.naver.com"]')) as HTMLAnchorElement[];
