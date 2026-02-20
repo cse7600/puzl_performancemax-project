@@ -32,7 +32,8 @@ def _merge_results(naver_df: pd.DataFrame, google_map: dict) -> pd.DataFrame:
             '구글 월간검색수', '경쟁정도', '구글 경쟁도']
     existing = [c for c in cols if c in df.columns]
     rest = [c for c in df.columns if c not in cols]
-    return df[existing + rest]
+    df = df[existing + rest]
+    return df.sort_values('총 월간검색수', ascending=False).reset_index(drop=True)
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -40,6 +41,7 @@ def index():
     keywords_input = request.form.get('keywords', '').strip()
     error = None
     df = None
+    keywords = []
 
     if request.method == 'POST':
         if not keywords_input:
@@ -71,12 +73,14 @@ def index():
         table_html = df.to_html(index=False, classes='result-table', border=0)
         row_count = len(df)
 
+    seed_keywords = keywords if request.method == 'POST' and keywords_input else []
     return render_template(
         'index.html',
         table_html=table_html,
         error=error,
         keywords_input=keywords_input,
         row_count=row_count,
+        seed_keywords=seed_keywords,
     )
 
 

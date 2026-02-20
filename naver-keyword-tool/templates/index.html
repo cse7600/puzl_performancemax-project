@@ -110,6 +110,13 @@
     .comp-mid    { background: #fff8e6; color: #e8a202; }
     .comp-high   { background: #fef0f0; color: #e74c3c; }
     .comp-none   { color: #ccc; }
+
+    /* seed 키워드 뱃지 */
+    .badge-seed {
+      font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 8px;
+      background: #f0e6ff; color: #7c3aed; border: 1px solid #d8b4fe;
+      vertical-align: middle; margin-left: 5px;
+    }
   </style>
 </head>
 <body>
@@ -159,6 +166,10 @@
 </div>
 
 <script>
+  const SEED_KEYWORDS = new Set(
+    {{ seed_keywords | tojson }}.map(k => k.replace(/\s/g, '').toLowerCase())
+  );
+
   // 조회 버튼 클릭 시 로딩 표시
   document.getElementById('search-form').addEventListener('submit', function() {
     document.getElementById('search-btn').disabled = true;
@@ -180,6 +191,11 @@
       cells.forEach((td, i) => {
         const header = headers[i] || '';
         const val = td.textContent.trim();
+
+        // seed 키워드 라벨
+        if (i === 0 && SEED_KEYWORDS.has(val.replace(/\s/g, '').toLowerCase())) {
+          td.innerHTML = `${val} <span class="badge-seed">seed</span>`;
+        }
 
         // 경쟁도 셀 뱃지화
         if (header === '경쟁정도' || header === '구글 경쟁도') {
