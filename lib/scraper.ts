@@ -4,12 +4,22 @@ const NAVER_SEARCH_URL = 'https://search.naver.com/search.naver';
 const BADGE_WORDS = ['네이버 로그인', 'Naver Pay', '네이버 아이디', '네이버페이', '서비스 보기'];
 
 async function getBrowser() {
-  // 로컬 개발: playwright 직접 사용
-  // Vercel/CI: playwright-core + @sparticuz/chromium-min
-  if (process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH) {
-    const { chromium } = await import('playwright-core');
-    return chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH });
+  // Vercel serverless: use @sparticuz/chromium-min + playwright-core
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_VERSION || process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH) {
+    const { chromium: playwrightChromium } = await import('playwright-core');
+    let executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+    let args: string[] = [];
+    if (!executablePath) {
+      const chromiumModule = (await import('@sparticuz/chromium-min')).default;
+      args = chromiumModule.args;
+      executablePath = await chromiumModule.executablePath(
+        process.env.CHROMIUM_PACK_URL ||
+          'https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar'
+      );
+    }
+    return playwrightChromium.launch({ executablePath, args, headless: true });
   }
+  // Local dev: use bundled playwright chromium
   const { chromium } = await import('playwright');
   return chromium.launch({ headless: true });
 }
