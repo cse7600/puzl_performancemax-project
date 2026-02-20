@@ -115,14 +115,46 @@ export default function KeywordSidebar({ keywords, activeKeyword, onRefresh, onS
     <aside className="w-64 shrink-0 flex flex-col bg-white border-r border-gray-200 h-full">
       {/* Sidebar header */}
       <div className="px-4 py-3 border-b border-gray-100">
-        <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">캠페인 키워드</h2>
+        <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">캠페인 키워드</h2>
+        {/* Add keyword form — top */}
+        <form onSubmit={handleAdd} className="space-y-2">
+          <input
+            type="text"
+            value={newKeyword}
+            onChange={(e) => setNewKeyword(e.target.value)}
+            placeholder="새 키워드 입력"
+            className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <div className="flex gap-2">
+            <select
+              value={newInterval}
+              onChange={(e) => setNewInterval(Number(e.target.value) as MonitorKeyword['interval_hours'])}
+              className="flex-1 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {[
+                { value: 1, label: '1시간' }, { value: 3, label: '3시간' },
+                { value: 6, label: '6시간' }, { value: 12, label: '12시간' },
+                { value: 24, label: '24시간' },
+              ].map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              disabled={isAdding || !newKeyword.trim()}
+              className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
+            >
+              {isAdding ? '...' : '+ 추가'}
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* Keyword list */}
       <nav className="flex-1 overflow-y-auto py-2">
         {keywords.length === 0 ? (
           <p className="text-xs text-gray-400 text-center py-6 px-4">
-            아래에서 키워드를 추가하세요
+            위에서 키워드를 추가하세요
           </p>
         ) : (
           keywords.map((kw) => {
@@ -247,41 +279,6 @@ export default function KeywordSidebar({ keywords, activeKeyword, onRefresh, onS
         )}
       </nav>
 
-      {/* Add keyword form */}
-      <div className="border-t border-gray-200 p-3">
-        <form onSubmit={handleAdd} className="space-y-2">
-          <input
-            type="text"
-            value={newKeyword}
-            onChange={(e) => setNewKeyword(e.target.value)}
-            placeholder="새 키워드 입력"
-            className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <div className="flex gap-2">
-            <select
-              value={newInterval}
-              onChange={(e) => setNewInterval(Number(e.target.value) as MonitorKeyword['interval_hours'])}
-              className="flex-1 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {INTERVAL_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{
-                  o.value === 1 ? '1시간' :
-                  o.value === 3 ? '3시간' :
-                  o.value === 6 ? '6시간' :
-                  o.value === 12 ? '12시간' : '24시간'
-                }</option>
-              ))}
-            </select>
-            <button
-              type="submit"
-              disabled={isAdding || !newKeyword.trim()}
-              className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
-            >
-              {isAdding ? '...' : '+ 추가'}
-            </button>
-          </div>
-        </form>
-      </div>
     </aside>
   );
 }
