@@ -50,11 +50,17 @@ export async function getGoogleKeywordStats(
 
     for (const batch of batches) {
       try {
-        const { results } = await customer.keywordPlanIdeas.generateKeywordIdeas({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { results } = await (customer.keywordPlanIdeas as any).generateKeywordIdeas({
+          customer_id: customerId,
           language: LANGUAGE_KO,
           geo_target_constants: [GEO_KR],
           keyword_plan_network: enums.KeywordPlanNetwork.GOOGLE_SEARCH,
           keyword_seed: { keywords: batch },
+          include_adult_keywords: false,
+          page_size: 1000,
+          keyword_annotation: [],
+          aggregate_metrics: [],
         });
 
         for (const idea of results ?? []) {
