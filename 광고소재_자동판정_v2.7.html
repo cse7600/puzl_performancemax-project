@@ -335,108 +335,57 @@
 
         <div id="api-mode" class="hidden">
 
-            <!-- 플랫폼 선택 탭 -->
-            <div style="display:flex; gap:4px; margin-bottom:20px; background:var(--bg-input); padding:3px; border-radius:8px; width:fit-content;">
-                <button id="tab-meta" onclick="switchApiPlatform('meta')" style="padding:7px 20px; background:var(--bg-card); border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:700; color:var(--text-primary); box-shadow:0 1px 3px rgba(0,0,0,0.1); transition:all 0.18s;">📘 Meta 광고</button>
-                <button id="tab-google" onclick="switchApiPlatform('google')" style="padding:7px 20px; background:transparent; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:600; color:var(--text-muted); transition:all 0.18s;">🎯 Google Ads</button>
+            <!-- 안내 배너 -->
+            <div style="background:var(--info-bg); border:1px solid var(--info-border); border-radius:10px; padding:16px 18px; margin-bottom:20px; font-size:13px; color:var(--text-secondary); line-height:1.7;">
+                <strong style="color:var(--info);">ℹ️ Meta Graph API 직접 연동</strong><br>
+                아래 정보를 입력하면 Meta 광고 관리자 데이터를 <strong>브라우저에서 직접</strong> 불러옵니다. Access Token은 서버로 전송되지 않으며 이 브라우저 탭 안에서만 사용됩니다.<br>
+                <span style="font-size:12px; color:var(--text-muted);">※ 토큰 발급 방법: Meta for Developers → Graph API Explorer → 계정 권한(ads_read) 포함 토큰 생성</span>
             </div>
 
-            <!-- ── META API 섹션 ── -->
-            <div id="meta-api-section">
-                <div style="background:var(--info-bg); border:1px solid var(--info-border); border-radius:10px; padding:16px 18px; margin-bottom:20px; font-size:13px; color:var(--text-secondary); line-height:1.7;">
-                    <strong style="color:var(--info);">ℹ️ Meta Graph API 직접 연동</strong><br>
-                    Access Token을 입력하고 <strong>"계정 목록 불러오기"</strong>를 클릭하면 연결된 광고 계정을 선택할 수 있습니다.<br>
-                    <span style="font-size:12px; color:var(--text-muted);">※ 토큰 발급: Meta for Developers → Graph API Explorer → ads_read 권한 포함 토큰 생성</span>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <div class="input-group">
+                    <label>🔑 Access Token <span style="color:var(--danger); font-weight:700;">*</span></label>
+                    <input type="password" id="accessToken" placeholder="EAAxxxxxxx...">
+                    <span class="input-hint">Meta for Developers → Graph API Explorer에서 발급 (ads_read 권한 필요)</span>
                 </div>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                    <div class="input-group">
-                        <label>🔑 Access Token <span style="color:var(--danger); font-weight:700;">*</span></label>
-                        <input type="password" id="metaToken" placeholder="EAAxxxxxxx...">
-                        <span class="input-hint">Meta for Developers → Graph API Explorer에서 발급 (ads_read 권한 필요)</span>
-                    </div>
-                    <div class="input-group">
-                        <label>🏢 광고 계정 <span style="color:var(--danger); font-weight:700;">*</span></label>
-                        <button class="btn btn-secondary btn-sm" id="metaLoadBtn" onclick="loadMetaAccounts()" style="height:40px; padding:0 16px; white-space:nowrap; margin:0;">🔍 계정 목록 불러오기</button>
-                        <div id="metaAcctWrap" style="display:none; margin-top:8px;">
-                            <select id="metaAccountSelect" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg-card);color:var(--text-primary);">
-                                <option value="">-- 계정을 선택하세요 --</option>
-                            </select>
-                        </div>
-                        <span class="input-hint">토큰 입력 후 위 버튼을 클릭하면 계정 목록이 나옵니다</span>
-                    </div>
-                    <div class="input-group">
-                        <label>📅 데이터 기간</label>
-                        <select id="apiDatePreset" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg-card);color:var(--text-primary);">
-                            <option value="last_7d">최근 7일</option>
-                            <option value="last_14d" selected>최근 14일 (권장)</option>
-                            <option value="last_30d">최근 30일</option>
-                            <option value="last_90d">최근 90일</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label>🎯 전환 이벤트 종류</label>
-                        <select id="apiConvEvent" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg-card);color:var(--text-primary);">
-                            <option value="purchase">구매 (purchase)</option>
-                            <option value="lead">리드 (lead)</option>
-                            <option value="complete_registration">가입 완료</option>
-                            <option value="add_to_cart">장바구니 담기</option>
-                            <option value="initiate_checkout">결제 시작</option>
-                            <option value="contact">문의/연락</option>
-                        </select>
-                        <span class="input-hint">캠페인에서 추적 중인 전환 목표를 선택하세요</span>
-                    </div>
+                <div class="input-group">
+                    <label>🏢 Ad Account ID <span style="color:var(--danger); font-weight:700;">*</span></label>
+                    <input type="text" id="accountId" placeholder="act_1234567890">
+                    <span class="input-hint">광고 관리자 URL 또는 비즈니스 설정에서 확인 — act_ 포함 입력</span>
                 </div>
-
-                <div id="apiStatus" style="display:none; margin:14px 0; padding:14px 16px; border-radius:8px; font-size:13px; line-height:1.6;"></div>
-
-                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                    <button class="btn btn-primary" id="apiFetchBtn" onclick="fetchMetaAPIData()">
-                        <span id="apiBtnText">📡 Meta API로 데이터 불러오기</span>
-                    </button>
-                    <button class="btn btn-secondary" onclick="fetchMetaSampleData()">🎲 샘플 데이터로 시연</button>
-                    <span style="font-size:12px; color:var(--text-muted);">실제 토큰 없이 기능을 먼저 확인하려면 샘플 데이터를 사용하세요</span>
+                <div class="input-group">
+                    <label>📅 데이터 기간</label>
+                    <select id="apiDatePreset" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg-card);color:var(--text-primary);">
+                        <option value="last_7d">최근 7일</option>
+                        <option value="last_14d" selected>최근 14일 (권장)</option>
+                        <option value="last_30d">최근 30일</option>
+                        <option value="last_90d">최근 90일</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>🎯 전환 이벤트 종류</label>
+                    <select id="apiConvEvent" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg-card);color:var(--text-primary);">
+                        <option value="purchase">구매 (purchase)</option>
+                        <option value="lead">리드 (lead)</option>
+                        <option value="complete_registration">가입 완료</option>
+                        <option value="add_to_cart">장바구니 담기</option>
+                        <option value="initiate_checkout">결제 시작</option>
+                        <option value="contact">문의/연락</option>
+                    </select>
+                    <span class="input-hint">캠페인에서 추적 중인 전환 목표를 선택하세요</span>
                 </div>
             </div>
 
-            <!-- ── GOOGLE ADS 섹션 ── -->
-            <div id="google-api-section" style="display:none;">
-                <div style="background:var(--success-bg); border:1px solid var(--success-border); border-radius:10px; padding:16px 18px; margin-bottom:20px; font-size:13px; color:var(--text-secondary); line-height:1.7;">
-                    <strong style="color:var(--success);">✅ Google Ads API — 서버 연동 방식</strong><br>
-                    별도 자격증명 입력이 불필요합니다. 서버에 등록된 OAuth2 인증을 통해 데이터를 가져옵니다.<br>
-                    <span style="font-size:12px; color:var(--text-muted);">※ 계정 목록 불러오기 → 분석할 계정 선택 → 데이터 불러오기 순서로 진행하세요</span>
-                </div>
+            <!-- API 호출 상태 영역 -->
+            <div id="apiStatus" style="display:none; margin:14px 0; padding:14px 16px; border-radius:8px; font-size:13px; line-height:1.6;"></div>
 
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                    <div class="input-group">
-                        <label>🏢 광고 계정 <span style="color:var(--danger); font-weight:700;">*</span></label>
-                        <button class="btn btn-secondary btn-sm" id="googleLoadBtn" onclick="loadGoogleAdsAccounts()" style="height:40px; padding:0 16px; white-space:nowrap; margin:0;">🔍 계정 목록 불러오기</button>
-                        <div id="googleAcctWrap" style="display:none; margin-top:8px;">
-                            <select id="googleAccountSelect" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg-card);color:var(--text-primary);">
-                                <option value="">-- 계정을 선택하세요 --</option>
-                            </select>
-                        </div>
-                        <span class="input-hint">위 버튼을 클릭하면 접근 가능한 계정 목록이 나옵니다</span>
-                    </div>
-                    <div class="input-group">
-                        <label>📅 데이터 기간</label>
-                        <select id="googleDatePreset" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg-card);color:var(--text-primary);">
-                            <option value="LAST_7_DAYS">최근 7일</option>
-                            <option value="LAST_14_DAYS" selected>최근 14일 (권장)</option>
-                            <option value="LAST_30_DAYS">최근 30일</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div id="googleAdsStatus" style="display:none; margin:14px 0; padding:14px 16px; border-radius:8px; font-size:13px; line-height:1.6;"></div>
-
-                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                    <button class="btn btn-primary" id="googleFetchBtn" onclick="fetchGoogleAdsData()">
-                        <span id="googleBtnText">📡 Google Ads 데이터 불러오기</span>
-                    </button>
-                </div>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <button class="btn btn-primary" id="apiFetchBtn" onclick="fetchMetaAPIData()">
+                    <span id="apiBtnText">📡 Meta API로 데이터 불러오기</span>
+                </button>
+                <button class="btn btn-secondary" onclick="fetchMetaSampleData()">🎲 샘플 데이터로 시연</button>
+                <span style="font-size:12px; color:var(--text-muted);">실제 토큰 없이 기능을 먼저 확인하려면 샘플 데이터를 사용하세요</span>
             </div>
-
         </div>
 
         <div style="margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border);">
@@ -1531,14 +1480,14 @@ function setApiStatus(type, msg) {
 }
 
 async function fetchMetaAPIData() {
-    const token    = document.getElementById('metaToken').value.trim();
-    const account  = document.getElementById('metaAccountSelect').value;
-    const preset   = document.getElementById('apiDatePreset').value;
-    const convEvt  = document.getElementById('apiConvEvent').value;
+    const token   = document.getElementById('accessToken').value.trim();
+    const account = document.getElementById('accountId').value.trim();
+    const preset  = document.getElementById('apiDatePreset').value;
+    const convEvt = document.getElementById('apiConvEvent').value;
 
     if (!token)   return setApiStatus('error', '❌ Access Token을 입력해주세요.');
-    if (!account) return setApiStatus('error', '❌ 광고 계정을 선택해주세요. 먼저 "계정 목록 불러오기"를 클릭하세요.');
-    const accountId = account; // already in act_XXXX format from /me/adaccounts API
+    if (!account) return setApiStatus('error', '❌ Ad Account ID를 입력해주세요. (예: act_1234567890)');
+    const accountId = account.startsWith('act_') ? account : 'act_' + account;
 
     const btn = document.getElementById('apiFetchBtn');
     btn.disabled = true;
@@ -1616,186 +1565,6 @@ async function fetchMetaAPIData() {
             `❌ 네트워크 오류: ${e.message}<br>
             <span style="font-size:12px;">브라우저 콘솔(F12)에서 CORS 오류 여부를 확인하세요. Meta Graph API는 브라우저 직접 호출을 지원합니다.</span>`
         );
-    }
-}
-
-// ====================================================================
-//  플랫폼 전환 (Meta ↔ Google Ads)
-// ====================================================================
-function switchApiPlatform(platform) {
-    const isMeta = platform === 'meta';
-    document.getElementById('meta-api-section').style.display   = isMeta ? '' : 'none';
-    document.getElementById('google-api-section').style.display = isMeta ? 'none' : '';
-
-    const metaTab   = document.getElementById('tab-meta');
-    const googleTab = document.getElementById('tab-google');
-
-    metaTab.style.background  = isMeta ? 'var(--bg-card)' : 'transparent';
-    metaTab.style.fontWeight  = isMeta ? '700' : '600';
-    metaTab.style.color       = isMeta ? 'var(--text-primary)' : 'var(--text-muted)';
-    metaTab.style.boxShadow   = isMeta ? '0 1px 3px rgba(0,0,0,0.1)' : 'none';
-
-    googleTab.style.background = !isMeta ? 'var(--bg-card)' : 'transparent';
-    googleTab.style.fontWeight = !isMeta ? '700' : '600';
-    googleTab.style.color      = !isMeta ? 'var(--text-primary)' : 'var(--text-muted)';
-    googleTab.style.boxShadow  = !isMeta ? '0 1px 3px rgba(0,0,0,0.1)' : 'none';
-}
-
-// ====================================================================
-//  Meta — 계정 목록 자동 불러오기
-// ====================================================================
-async function loadMetaAccounts() {
-    const token = document.getElementById('metaToken').value.trim();
-    if (!token) return setApiStatus('error', '❌ Access Token을 먼저 입력해주세요.');
-
-    const btn = document.getElementById('metaLoadBtn');
-    btn.disabled = true;
-    btn.textContent = '⏳ 불러오는 중...';
-    setApiStatus('loading', '📡 Meta 광고 계정 목록을 불러오는 중...');
-
-    try {
-        const res  = await fetch(`https://graph.facebook.com/v20.0/me/adaccounts?fields=name,account_id,account_status&limit=50&access_token=${token}`);
-        const json = await res.json();
-
-        if (json.error) {
-            const code = json.error.code;
-            const hint = code === 190  ? '토큰이 만료되었거나 잘못됩니다. 새 토큰을 발급해주세요.' :
-                         code === 10 || code === 200 ? '토큰에 ads_read 권한이 없습니다.' :
-                         json.error.message;
-            return setApiStatus('error', `❌ Meta API 오류 (${code}): ${hint}`);
-        }
-
-        const accounts = json.data || [];
-        if (!accounts.length) {
-            return setApiStatus('warn', '⚠️ 연결된 광고 계정이 없습니다. 해당 토큰 계정에 광고 계정이 있는지 확인하세요.');
-        }
-
-        const select = document.getElementById('metaAccountSelect');
-        select.innerHTML = '<option value="">-- 계정을 선택하세요 --</option>';
-        accounts.forEach(acc => {
-            const opt = document.createElement('option');
-            opt.value = acc.id; // act_XXXX 형식
-            const statusTxt = acc.account_status === 1 ? '✅ 활성' : acc.account_status === 2 ? '⚠️ 비활성' : '';
-            opt.textContent = `${acc.name}  |  ID: ${acc.account_id}  ${statusTxt}`;
-            select.appendChild(opt);
-        });
-
-        document.getElementById('metaAcctWrap').style.display = '';
-        setApiStatus('success', `✅ ${accounts.length}개 광고 계정을 불러왔습니다. 아래에서 분석할 계정을 선택하세요.`);
-    } catch (e) {
-        setApiStatus('error', `❌ 네트워크 오류: ${e.message}`);
-    } finally {
-        btn.disabled = false;
-        btn.textContent = '🔍 계정 목록 불러오기';
-    }
-}
-
-// ====================================================================
-//  Google Ads — 상태 표시
-// ====================================================================
-function setGoogleStatus(type, msg) {
-    const el = document.getElementById('googleAdsStatus');
-    el.style.display = 'block';
-    const colors = {
-        loading: ['var(--info-bg)',    'var(--info-border)',    'var(--info)'],
-        success: ['var(--success-bg)', 'var(--success-border)', 'var(--success)'],
-        error:   ['var(--danger-bg)',  'var(--danger-border)',  'var(--danger)'],
-        warn:    ['var(--warning-bg)', 'var(--warning-border)', 'var(--warning)'],
-    };
-    const [bg, border, color] = colors[type] || colors.loading;
-    el.style.background = bg;
-    el.style.border     = `1px solid ${border}`;
-    el.style.color      = color;
-    el.innerHTML        = msg;
-}
-
-// ====================================================================
-//  Google Ads — 계정 목록 불러오기 (서버 API 경유)
-// ====================================================================
-async function loadGoogleAdsAccounts() {
-    const btn = document.getElementById('googleLoadBtn');
-    btn.disabled = true;
-    btn.textContent = '⏳ 불러오는 중...';
-    setGoogleStatus('loading', '📡 Google Ads 계정 목록을 불러오는 중...');
-
-    try {
-        const res  = await fetch('/api/creative-judge/google-accounts');
-        const json = await res.json();
-
-        if (!res.ok || json.error) {
-            return setGoogleStatus('error', `❌ 오류: ${json.error || res.statusText}`);
-        }
-
-        const accounts = json.accounts || [];
-        if (!accounts.length) {
-            return setGoogleStatus('warn', '⚠️ 접근 가능한 Google Ads 계정이 없습니다.');
-        }
-
-        const select = document.getElementById('googleAccountSelect');
-        select.innerHTML = '<option value="">-- 계정을 선택하세요 --</option>';
-        accounts.forEach(acc => {
-            const opt = document.createElement('option');
-            opt.value = acc.id;
-            const currency = acc.currencyCode ? ` | ${acc.currencyCode}` : '';
-            const mgr      = acc.manager ? ' | 🏢 관리자 계정' : '';
-            opt.textContent = `${acc.name}  |  ID: ${acc.id}${currency}${mgr}`;
-            select.appendChild(opt);
-        });
-
-        document.getElementById('googleAcctWrap').style.display = '';
-        setGoogleStatus('success', `✅ ${accounts.length}개 Google Ads 계정을 불러왔습니다. 분석할 계정을 선택하세요.`);
-    } catch (e) {
-        setGoogleStatus('error', `❌ 네트워크 오류: ${e.message}`);
-    } finally {
-        btn.disabled = false;
-        btn.textContent = '🔍 계정 목록 불러오기';
-    }
-}
-
-// ====================================================================
-//  Google Ads — 광고 성과 데이터 불러오기 (서버 API 경유)
-// ====================================================================
-async function fetchGoogleAdsData() {
-    const customerId = document.getElementById('googleAccountSelect').value;
-    const datePreset = document.getElementById('googleDatePreset').value;
-
-    if (!customerId) return setGoogleStatus('error', '❌ 광고 계정을 선택해주세요. 먼저 "계정 목록 불러오기"를 클릭하세요.');
-
-    const btn = document.getElementById('googleFetchBtn');
-    btn.disabled = true;
-    document.getElementById('googleBtnText').textContent = '⏳ 불러오는 중...';
-    setGoogleStatus('loading', '<strong>📡 Google Ads API 연결 중...</strong> 광고 소재별 성과 데이터를 가져오고 있습니다...');
-
-    try {
-        const res  = await fetch('/api/creative-judge/google-insights', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ customerId, datePreset }),
-        });
-        const json = await res.json();
-
-        if (!res.ok || json.error) {
-            return setGoogleStatus('error', `❌ 오류: ${json.error || res.statusText}`);
-        }
-
-        const rows = json.rows || [];
-        if (!rows.length) {
-            return setGoogleStatus('warn', '⚠️ 해당 기간에 데이터가 없습니다. 기간을 늘리거나 계정을 확인해주세요.');
-        }
-
-        rawData = rows;
-        document.getElementById('analyzeBtn').disabled = false;
-
-        const creativeCount = new Set(rows.map(r => r.creative_id)).size;
-        setGoogleStatus('success',
-            `✅ <strong>Google Ads 데이터 로드 완료!</strong> 총 ${rows.length.toLocaleString()}행 · 소재 ${creativeCount}개<br>
-            <span style="font-size:12px;">기간: <strong>${datePreset.replace('LAST_', '최근 ').replace('_DAYS', '일')}</strong> · 계정 ID: <strong>${customerId}</strong></span>`
-        );
-    } catch (e) {
-        setGoogleStatus('error', `❌ 네트워크 오류: ${e.message}`);
-    } finally {
-        btn.disabled = false;
-        document.getElementById('googleBtnText').textContent = '📡 Google Ads 데이터 불러오기';
     }
 }
 

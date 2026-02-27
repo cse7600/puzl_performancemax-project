@@ -1,10 +1,21 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Ad, AdSnapshot, RankChange, MonitorKeyword, KeywordSearchVolume } from './types';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Lazy singleton: defer client creation until first use.
+// Prevents "supabaseUrl is required" during Next.js build-time page data collection.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _client: SupabaseClient<any> | null = null;
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getClient(): SupabaseClient<any> {
+  if (!_client) {
+    _client = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+  }
+  return _client;
+}
 
 export async function saveSnapshot(
   query: string,
@@ -12,7 +23,7 @@ export async function saveSnapshot(
   ads: Ad[],
   monitoredAt: string
 ): Promise<string | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getClient()
     .from('ad_monitor_snapshots')
     .insert({
       query,
@@ -20,7 +31,7 @@ export async function saveSnapshot(
       monitored_at: monitoredAt,
       ads,
       ad_count: ads.length,
-    })
+    } as any)
     .select('id')
     .single();
 
@@ -28,7 +39,8 @@ export async function saveSnapshot(
     console.error('Failed to save snapshot:', error);
     return null;
   }
-  return data.id;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data as any)?.id ?? null;
 }
 
 export async function savePrevRankChanges(
@@ -49,7 +61,7 @@ export async function savePrevRankChanges(
     snapshot_id: snapshotId,
     detected_at: detectedAt,
   }));
-  const { error } = await supabase.from('ad_monitor_rank_changes').insert(rows);
+  const { error } = await getClient().from('ad_monitor_rank_changes').insert(rows as any);
   if (error) console.error('Failed to save rank changes:', error);
 }
 
@@ -58,7 +70,7 @@ export async function getLatestSnapshots(query: string): Promise<{
   mobile: AdSnapshot | null;
 }> {
   const [pcRes, mobileRes] = await Promise.all([
-    supabase
+    getClient()
       .from('ad_monitor_snapshots')
       .select('*')
       .eq('query', query)
@@ -66,7 +78,7 @@ export async function getLatestSnapshots(query: string): Promise<{
       .order('monitored_at', { ascending: false })
       .limit(1)
       .single(),
-    supabase
+    getClient()
       .from('ad_monitor_snapshots')
       .select('*')
       .eq('query', query)
@@ -87,7 +99,7 @@ export async function getSnapshotHistory(
   platform: 'pc' | 'mobile',
   limit = 20
 ): Promise<AdSnapshot[]> {
-  const { data } = await supabase
+  const { data } = await getClient()
     .from('ad_monitor_snapshots')
     .select('*')
     .eq('query', query)
@@ -103,7 +115,7 @@ export async function getPreviousSnapshot(
   platform: 'pc' | 'mobile',
   beforeTime: string
 ): Promise<AdSnapshot | null> {
-  const { data } = await supabase
+  const { data } = await getClient()
     .from('ad_monitor_snapshots')
     .select('*')
     .eq('query', query)
@@ -119,7 +131,7 @@ export async function getPreviousSnapshot(
 // ── Keyword management ──────────────────────────────────────────────────────
 
 export async function getKeywords(): Promise<MonitorKeyword[]> {
-  const { data } = await supabase
+  const { data } = await getClient()
     .from('monitor_keywords')
     .select('*')
     .order('created_at', { ascending: true });
@@ -130,9 +142,9 @@ export async function addKeyword(
   keyword: string,
   interval_hours: MonitorKeyword['interval_hours']
 ): Promise<MonitorKeyword | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getClient()
     .from('monitor_keywords')
-    .insert({ keyword, interval_hours })
+    .insert({ keyword, interval_hours } as any)
     .select()
     .single();
   if (error) {
@@ -146,7 +158,7 @@ export async function updateKeyword(
   id: string,
   updates: Partial<Pick<MonitorKeyword, 'enabled' | 'interval_hours'>>
 ): Promise<boolean> {
-  const { error } = await supabase
+  const { error } = await getClient()
     .from('monitor_keywords')
     .update(updates)
     .eq('id', id);
@@ -155,7 +167,7 @@ export async function updateKeyword(
 }
 
 export async function deleteKeyword(id: string): Promise<boolean> {
-  const { error } = await supabase
+  const { error } = await getClient()
     .from('monitor_keywords')
     .delete()
     .eq('id', id);
@@ -164,14 +176,14 @@ export async function deleteKeyword(id: string): Promise<boolean> {
 }
 
 export async function updateKeywordLastRun(id: string, lastRunAt: string): Promise<void> {
-  await supabase
+  await getClient()
     .from('monitor_keywords')
     .update({ last_run_at: lastRunAt })
     .eq('id', id);
 }
 
 export async function getDueKeywords(): Promise<MonitorKeyword[]> {
-  const { data } = await supabase
+  const { data } = await getClient()
     .from('monitor_keywords')
     .select('*')
     .eq('enabled', true)
@@ -196,7 +208,7 @@ export async function getDueKeywords(): Promise<MonitorKeyword[]> {
 export async function upsertKeywordSearchVolume(
   data: Omit<KeywordSearchVolume, 'id' | 'fetched_at'>
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await getClient()
     .from('keyword_search_volumes')
     .upsert(
       { ...data, fetched_at: new Date().toISOString() },
@@ -208,7 +220,7 @@ export async function upsertKeywordSearchVolume(
 export async function getLatestKeywordVolume(
   keyword: string
 ): Promise<KeywordSearchVolume | null> {
-  const { data } = await supabase
+  const { data } = await getClient()
     .from('keyword_search_volumes')
     .select('*')
     .eq('keyword', keyword)
@@ -222,7 +234,7 @@ export async function getMultipleKeywordVolumes(
   keywords: string[]
 ): Promise<Map<string, KeywordSearchVolume>> {
   if (keywords.length === 0) return new Map();
-  const { data } = await supabase
+  const { data } = await getClient()
     .from('keyword_search_volumes')
     .select('*')
     .in('keyword', keywords);
@@ -231,4 +243,21 @@ export async function getMultipleKeywordVolumes(
     map.set(row.keyword, row);
   }
   return map;
+}
+
+// ── Rank changes ────────────────────────────────────────────────────────────
+
+export async function getRankChanges(
+  query: string,
+  platform: string,
+  limit = 30
+): Promise<object[]> {
+  const { data } = await getClient()
+    .from('ad_monitor_rank_changes')
+    .select('*')
+    .eq('query', query)
+    .eq('platform', platform)
+    .order('detected_at', { ascending: false })
+    .limit(limit);
+  return data ?? [];
 }

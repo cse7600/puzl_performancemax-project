@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLatestSnapshots, getSnapshotHistory } from '@/lib/supabase';
-import { supabase } from '@/lib/supabase';
+import { getLatestSnapshots, getSnapshotHistory, getRankChanges } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,13 +24,7 @@ export async function GET(req: NextRequest) {
     if (type === 'changes') {
       const platform = searchParams.get('platform') || 'pc';
       const limit = parseInt(searchParams.get('limit') || '30');
-      const { data } = await supabase
-        .from('ad_monitor_rank_changes')
-        .select('*')
-        .eq('query', query)
-        .eq('platform', platform)
-        .order('detected_at', { ascending: false })
-        .limit(limit);
+      const data = await getRankChanges(query, platform, limit);
       return NextResponse.json({ success: true, data });
     }
 

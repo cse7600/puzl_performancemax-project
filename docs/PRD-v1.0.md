@@ -54,9 +54,9 @@
 
 | 기능명 | 파일 경로 | 최초 작성일 | 상태 | 한줄 요약 |
 |--------|-----------|------------|------|-----------|
-| 광고 소재 자동 판정 | `docs/01-plan/features/F-01-creative-judge.prd.md` | 2026-02-27 | 진행 중 (v1.1) | CPA/ROAS 이중 모드 + 계층구조 + 학습기간 처리 |
-| 네이버 키워드 툴 | `docs/01-plan/features/F-02-keyword-tool.prd.md` | 2026-02-27 | 기획 확정 | 네이버+구글 검색량 조회 및 키워드 인텔리전스 |
-| 네이버 광고주 순위 모니터 | `docs/01-plan/features/F-03-ad-monitor.prd.md` | - | PRD 미작성 | 키워드별 광고주 순위 변동 추적 (구현 완료, 소급 문서화 필요) |
+| 광고 소재 자동 판정 | `docs/01-plan/features/F-01-creative-judge.prd.md` | 2026-02-27 | 진행 중 (v1.1) | CPA 모드 동작 중. Google API 라우트 추가 완료. ROAS 모드·네이버/구글 CSV·계층 뷰 미구현 |
+| 네이버 키워드 툴 | `docs/01-plan/features/F-02-keyword-tool.prd.md` | 2026-02-27 | 운영 중 | 네이버+구글 검색량 조회 및 키워드 인텔리전스 |
+| 네이버 광고주 순위 모니터 | `docs/01-plan/features/F-03-ad-monitor.prd.md` | 2026-02-27 | 운영 중 | GitHub Actions 기반 수집. PC/모바일 탭. 순위 변동 추적. PRD 소급 작성 완료 |
 
 ---
 
@@ -65,3 +65,5 @@
 | 날짜 | 빌드 유형 | 변경 내용 요약 | 결과 |
 |------|----------|----------------|------|
 | 2026-02-27 | production | 광고소재 자동판정 통합 + PRD 작성 | 성공 |
+| 2026-02-27 | production | Vercel 빌드 오류 수정 (Supabase lazy init, snapshots 리팩토링) | 성공 |
+| 2026-02-27 | production | Google Ads API Route 추가 + Meta/Google 계정 선택 UI + 참고자료 tsconfig 제외 + TypeScript 타입 수정 | 성공 |

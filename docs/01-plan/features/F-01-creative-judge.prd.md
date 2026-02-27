@@ -304,10 +304,23 @@ w = 슬라이더 값 (0.0 ~ 1.0)
 
 ---
 
-## 11. 현재 구현 현황 (iframe)
-- `/public/creative-judge.html` — Meta 전용 v2.7, 바닐라 JS
-- `/app/creative-judge/page.tsx` — Next.js iframe 래퍼
-- **기술 부채:** iframe 방식은 사이드바와 상태 공유 불가, 스타일 통일 불가
+## 11. 현재 구현 현황
+
+### 11.1 구현 완료
+- `/public/creative-judge.html` — Meta 전용 v2.7, 바닐라 JS (CPA 모드)
+- `/app/creative-judge/page.tsx` — Next.js iframe 래퍼 + 사이드바 통합
+- `/app/api/creative-judge/google-accounts/route.ts` — Google Ads 계정 목록 조회 API
+- `/app/api/creative-judge/google-insights/route.ts` — Google Ads 광고 성과 데이터 API
+
+### 11.2 미구현 (Phase 1 잔여)
+- ROAS 모드 (기획 확정, 코드 미구현)
+- 네이버 CSV 파싱 (컬럼 매핑만 PRD에 정의됨)
+- Google CSV 파싱
+- Google API 연동 UI (API Route는 완료, creative-judge.html 탭 연결 완료 — 실제 데이터 흐름 테스트 필요)
+- 캠페인/광고세트 계층 뷰
+
+### 11.3 기술 부채
+- **iframe 방식:** 사이드바와 상태 공유 불가, 스타일 통일 불가
 - **마이그레이션 계획:** Phase 1 완성 시점에 React 컴포넌트로 재작성
 
 ---
@@ -317,6 +330,7 @@ w = 슬라이더 값 (0.0 ~ 1.0)
 | 날짜 | 빌드 유형 | 변경 내용 요약 | 결과 |
 |------|----------|----------------|------|
 | 2026-02-27 | production | 광고소재_자동판정_v2.7.html → Next.js 앱 통합 (iframe) + 사이드바 네비게이션 추가 | 성공 |
+| 2026-02-27 | production | Google Ads API Route 2개 신규 (계정 목록·성과 데이터) + Meta 계정 자동 선택 UI + Supabase 타입 수정 + 참고자료 폴더 제외 | 성공 |
 
 ## 13. 테스트 이력
 
