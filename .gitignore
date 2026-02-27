@@ -43,3 +43,7 @@ next-env.d.ts
 # script output
 scripts/output/
 *.result.json
+
+# AI assistant files
+.bkit/
+.claude/

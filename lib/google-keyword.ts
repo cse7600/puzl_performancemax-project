@@ -70,7 +70,7 @@ export async function getGoogleKeywordStats(
     for (const batch of batches) {
       try {
         const res = await fetch(
-          `https://googleads.googleapis.com/v17/customers/${customerId}/keywordPlanIdeas:generateKeywordIdeas`,
+          `https://googleads.googleapis.com/v20/customers/${customerId}:generateKeywordIdeas`,
           {
             method: 'POST',
             headers: {

@@ -34,7 +34,7 @@ interface Props {
   activeKeyword: string;
   onRefresh: () => void;
   onSelectKeyword: (keyword: string) => void;
-  activeSection?: 'monitor' | 'keyword-tool';
+  activeSection?: 'monitor' | 'keyword-tool' | 'creative-judge';
 }
 
 export default function KeywordSidebar({
@@ -122,26 +122,38 @@ export default function KeywordSidebar({
   return (
     <aside className="w-64 shrink-0 flex flex-col bg-white border-r border-gray-200 h-full">
       {/* ── 섹션 탭 네비게이션 ── */}
-      <div className="flex border-b border-gray-200 shrink-0">
+      <div className="flex flex-col border-b border-gray-200 shrink-0">
+        <div className="flex">
+          <Link
+            href="/"
+            className={`flex-1 py-2.5 text-xs text-center font-semibold transition-colors ${
+              activeSection === 'monitor'
+                ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            📡 광고 모니터
+          </Link>
+          <Link
+            href="/keyword-tool"
+            className={`flex-1 py-2.5 text-xs text-center font-semibold transition-colors ${
+              activeSection === 'keyword-tool'
+                ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            📊 검색량 조회
+          </Link>
+        </div>
         <Link
-          href="/"
-          className={`flex-1 py-2.5 text-xs text-center font-semibold transition-colors ${
-            activeSection === 'monitor'
-              ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50'
+          href="/creative-judge"
+          className={`py-2.5 text-xs text-center font-semibold transition-colors ${
+            activeSection === 'creative-judge'
+              ? 'border-b-2 border-orange-500 text-orange-600 bg-orange-50'
               : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
           }`}
         >
-          📡 광고 모니터
-        </Link>
-        <Link
-          href="/keyword-tool"
-          className={`flex-1 py-2.5 text-xs text-center font-semibold transition-colors ${
-            activeSection === 'keyword-tool'
-              ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50'
-              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          📊 검색량 조회
+          🎯 소재 자동 판정
         </Link>
       </div>
 
@@ -305,6 +317,19 @@ export default function KeywordSidebar({
             키워드를 입력하면<br />
             네이버·구글 월간 검색량을<br />
             바로 확인할 수 있습니다
+          </p>
+        </div>
+      )}
+
+      {/* 소재 자동 판정 탭 안내 */}
+      {activeSection === 'creative-judge' && (
+        <div className="flex-1 flex flex-col items-center justify-center px-4 text-center">
+          <p className="text-2xl mb-2">🎯</p>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            Meta · Google · Kakao<br />
+            네이버 광고 데이터를 업로드하면<br />
+            소재별 LIVE/OFF/WATCH를<br />
+            자동으로 판정합니다
           </p>
         </div>
       )}

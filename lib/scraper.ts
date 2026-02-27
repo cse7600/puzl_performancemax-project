@@ -174,10 +174,14 @@ export async function scrapeNaverAds(query: string): Promise<ScrapeResult> {
   const monitoredAt = new Date().toISOString();
   const searchUrl = `${NAVER_SEARCH_URL}?where=nexearch&ie=utf8&query=${encodeURIComponent(query)}`;
 
+  // Optional proxy (e.g. http://user:pass@p.webshare.io:10000)
+  const proxyUrl = process.env.WEBSHARE_PROXY_URL;
+  const proxyOption = proxyUrl ? { proxy: { server: proxyUrl } } : {};
+
   const browser = await getBrowser();
   try {
     // PC
-    const pcContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const pcContext = await browser.newContext({ viewport: { width: 1280, height: 800 }, ...proxyOption });
     const pcPage = await pcContext.newPage();
     await pcPage.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
     await pcPage.waitForTimeout(1500);
@@ -189,6 +193,7 @@ export async function scrapeNaverAds(query: string): Promise<ScrapeResult> {
     const mobileContext = await browser.newContext({
       viewport: { width: 390, height: 844 },
       userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      ...proxyOption,
     });
     const mobilePage = await mobileContext.newPage();
     await mobilePage.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });

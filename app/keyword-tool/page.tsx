@@ -7,6 +7,7 @@ import KeywordSidebar from '@/components/KeywordManager';
 export default function KeywordToolPage() {
   const [input, setInput] = useState('');
   const [results, setResults] = useState<KeywordSearchVolume[]>([]);
+  const [searchedKeywords, setSearchedKeywords] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<MonitorKeyword[]>([]);
@@ -35,6 +36,7 @@ export default function KeywordToolPage() {
 
     setIsLoading(true);
     setError(null);
+    setSearchedKeywords(kws);
     try {
       const res = await fetch('/api/keyword-stats', {
         method: 'POST',
@@ -184,9 +186,22 @@ export default function KeywordToolPage() {
                   <tbody>
                     {results
                       .slice()
-                      .sort((a, b) => b.total_volume - a.total_volume)
-                      .map((r) => (
-                        <tr key={r.keyword} className="border-b border-gray-50 hover:bg-gray-50">
+                      .sort((a, b) => {
+                        const aIdx = searchedKeywords.findIndex((k) => k.toLowerCase() === a.keyword.toLowerCase());
+                        const bIdx = searchedKeywords.findIndex((k) => k.toLowerCase() === b.keyword.toLowerCase());
+                        // Both are searched keywords → preserve input order
+                        if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+                        // Only a is searched → a goes first
+                        if (aIdx !== -1) return -1;
+                        // Only b is searched → b goes first
+                        if (bIdx !== -1) return 1;
+                        // Neither searched → sort by volume
+                        return b.total_volume - a.total_volume;
+                      })
+                      .map((r, idx) => {
+                        const isSearched = searchedKeywords.some((k) => k.toLowerCase() === r.keyword.toLowerCase());
+                        return (
+                        <tr key={r.keyword} className={`border-b border-gray-50 hover:bg-gray-50 ${isSearched ? 'bg-blue-50' : ''}`}>
                           <td className="py-2 px-2 font-medium text-gray-800">{r.keyword}</td>
                           <td className="py-2 px-2 text-right text-gray-600">{r.pc_volume.toLocaleString()}</td>
                           <td className="py-2 px-2 text-right text-gray-600">{r.mobile_volume.toLocaleString()}</td>
@@ -202,7 +217,8 @@ export default function KeywordToolPage() {
                           </td>
                           <td className="py-2 px-2 text-right text-gray-500">{r.avg_depth || '-'}</td>
                         </tr>
-                      ))}
+                        );
+                      })}
                   </tbody>
                 </table>
               </div>
